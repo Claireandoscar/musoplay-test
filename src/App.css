@@ -1,0 +1,210 @@
+/* Base styles */
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  transition: background-color 0.5s ease;
+  background-color: #FFFDEE;  /* Set cream background once */
+}
+
+/* Delete the other background-color rules */
+
+.game-wrapper {
+  width: 100%;
+  height: 100vh; /* We'll keep this, but add a fallback */
+  height: calc(var(--vh, 1vh) * 100);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.game-container {
+  width: 390px;
+  height: 844px;
+  position: relative;
+}
+
+
+.bars-container {
+  position: relative;
+  width: 100%;
+  height: 340px;
+}
+
+.lives-container {
+  position: absolute;
+  top: 10%;  /* Changed from 90px to 10% */
+  left: 60px;
+  width: 270px;
+  height: 60px;
+}
+
+.life-indicator {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+
+.life-indicator img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+/* Bar components */
+.bar {
+  position: absolute;
+  left: 60px;
+  width: 270px;
+  height: 60px;
+}
+
+.note {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  transform: translateX(-50%) translateY(-50%);
+  top: 50%;
+}
+
+/* Note positions for all bars */
+.bar .note:nth-child(1) { left: 0px; }
+.bar .note:nth-child(2) { left: 70px; }
+.bar .note:nth-child(3) { left: 140px; }
+.bar .note:nth-child(4) { left: 210px; }
+
+/* Individual bar positions */
+.bar1 { top: 230px; }
+.bar2 { top: 300px; }
+.bar3 { top: 370px; }
+.bar4 { top: 440px; }
+
+/* Buttons */
+.button-container {
+  position: absolute;
+  top: 560px;
+  left: 60px;
+  width: 270px;
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.test-button, .play-button {
+  width: 60px;
+  height: 40px;
+}
+
+/* Virtual instrument */
+.virtual-instrument {
+  position: absolute;
+  top: 610px;
+  left: 60px;
+  width: 270px;
+  height: 130px;
+  display: grid;
+  grid-template-columns: repeat(4, 60px);
+  grid-template-rows: repeat(2, 60px);
+  gap: 10px;
+}
+
+/* Cube button styles */
+.cube-button {
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.cube-button.flipped {
+  transform: rotateX(-180deg);
+}
+
+/* Progress bar */
+.progress-bar {
+  position: absolute;
+  bottom: 64px;
+  left: 60px;
+  width: 270px;
+  height: 10px;
+  background-color: #ccc;
+}
+
+/* Note visibility */
+.note {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.note.visible {
+  opacity: 1;
+}
+
+/* Adjust styles for better visibility in play and practice modes */
+.game-container.play *, .game-container.practice * {
+  color: black;
+}
+
+/* Optional: Add a subtle animation to the overlay */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes practiceGlow {
+  0% { box-shadow: 0 0 5px rgba(173, 216, 230, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(173, 216, 230, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(173, 216, 230, 0.5); }
+}
+
+/* Fade elements during practice mode */
+.game-container.practice .life-indicator,
+.game-container.practice .line,
+.game-container.practice .note.visible {
+  opacity: 0.3;
+  transition: opacity 0.5s ease;
+}
+
+/* Keep active bar notes more visible */
+.game-container.practice .bar.active .note.visible {
+  opacity: 0.6;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 389px) {
+  .game-container {
+    transform: scale(0.9);
+    transform-origin: top center;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 767px) {
+  .game-container {
+    transform: scale(1);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .game-container {
+    transform: scale(1.2);
+    transform-origin: center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-container {
+    transform: scale(1.2);
+    transform-origin: top;
+  }
+}
+
+/* Ensure the game fits vertically */
+@media (max-height: 843px) {
+  .game-container {
+    transform: scale(0.9);
+    transform-origin: top center;
+  }
+}

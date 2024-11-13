@@ -1,0 +1,158 @@
+.start-screen {
+  width: 390px;
+  height: 844px;
+  background-color: #FFFDEE;
+  position: relative;
+  font-family: 'patrick-hand-sc', sans-serif;
+  color: black;
+}
+
+.logo {
+  position: absolute;
+  width: 350px;
+  height: 60px;
+  left: 20px;
+  top: 80px;
+}
+
+.tagline {
+  position: absolute;
+  width: 260px;
+  height: 30px;
+  left: 65px;
+  top: 150px;
+  text-align: center;
+  font-size: 18px;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.start-button,
+.instructions-button {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  left: 95px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 10px;
+  transition: transform 0.1s;
+}
+
+.start-button {
+  top: 210px;
+  animation: pulse 2s infinite;
+}
+
+.instructions-button {
+  top: 500px;
+}
+
+.start-button:hover,
+.instructions-button:hover {
+  animation: none;
+  transform: scale(1.05);
+}
+
+.start-button:active,
+.instructions-button:active {
+  transform: scale(0.95);
+}
+
+.start-button img,
+.instructions-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.start-button span,
+.instructions-button span {
+  position: absolute;
+  bottom: -50px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 22px;
+  line-height: 1.2; 
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.instructions-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 350px;
+  height: auto;
+  max-height: 600px;
+  background-color: #FFFDEE;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 30px 20px;
+  box-sizing: border-box;
+  border: 7px solid #AB08FF;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  color: #000;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.instructions-content {
+  color: black;
+  text-align: center;
+}
+
+.instructions-content h2 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.instruction-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.instruction-item img {
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+}
+
+.instruction-item p {
+  font-size: 20px;
+  line-height: 1.4;
+  margin: 0;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.challenge {
+  font-size: 22px;
+  font-weight: bold;
+  margin-top: 20px;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
