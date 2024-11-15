@@ -69,35 +69,42 @@
   margin: 0 6px;
 }
 
-.date-text {
-  font-size: 24px;
-  margin: 15px 0 10px;
-}
-
-.social-icons {
-  display: flex;
-  justify-content: center;
-  gap: 25px;
-  margin-top: 15px;
-}
-
-.social-icon-button {
-  background: none;
-  border: none;
-  color: black;
-  font-size: 24px;
+.next-button {
+  width: 80px;
+  height: 80px;
+  margin-top: 20px;
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: transform 0.3s ease;
+  position: absolute;
+  bottom: 140px; /* Position above the typed message */
 }
 
-.social-icon-button:hover {
-  color: #AB08FF;
+.next-button:hover {
+  transform: scale(1.1);
 }
 
-.musoplay-logo {
+.typed-message {
+  font-family: 'patrick-hand-sc', sans-serif;
+  text-align: center;
+  margin-top: 20px;
+  font-size: 24px;
+  line-height: 1.2;
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  padding: 0 20px;
+}
+
+.typed-message p {
+  margin: 0;
+}
+
+.logo {
+  position: absolute;
+  bottom: 20px;
   width: 150px;
   height: 33px;
-  margin-top: 30px;
   object-fit: contain;
 }
 
@@ -118,40 +125,19 @@
     margin: 5px 0;
   }
 
-  .social-icons {
-    margin-top: 10px;
+  .next-button {
+    width: 60px;
+    height: 60px;
+    bottom: 120px;
   }
 
-  .social-icon-button {
-    font-size: 20px;
+  .typed-message {
+    bottom: 60px;
+    font-size: 16px;
   }
 
-  .musoplay-logo {
-    margin-top: 40px;
+  .logo {
     width: 120px;
     height: 26px;
-  }
-}
-.typed-message {
-  font-family: 'patrick-hand-sc', sans-serif;
-  text-align: center;
-  margin-top: 20px;
-  font-size: 24px;
-  line-height: 1.2;
-  position: absolute;
-  bottom: 80px; /* Position above the logo */
-  left: 0;
-  right: 0;
-  padding: 0 20px; /* Add some padding on the sides for very narrow screens */
-}
-
-.typed-message p {
-  margin: 0;
-}
-
-@media (max-height: 600px) {
-  .typed-message {
-    bottom: 60px; /* Adjust for smaller screens */
-    font-size: 16px;
   }
 }

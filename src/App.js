@@ -9,9 +9,6 @@ import StartScreen from './components/StartScreen';
 
 
 function App() {
-  const [testGameNumber, setTestGameNumber] = useState(() => {
-    return parseInt(localStorage.getItem('currentGame')) || 1;
-  });
   const [audioFiles, setAudioFiles] = useState([]);
   const [fullTunePath, setFullTunePath] = useState('');
   const [fullTuneAudio, setFullTuneAudio] = useState(null);
@@ -38,6 +35,7 @@ function App() {
   const [audioContext, setAudioContext] = useState(null);
   const [isBarFailing, setIsBarFailing] = useState(false);
   const [failedBars, setFailedBars] = useState([false, false, false, false]);
+  const [currentGameNumber, setCurrentGameNumber] = useState(1);
  
   const initializeAudioContext = useCallback(() => {
     if (!audioContext) {
@@ -62,7 +60,7 @@ function App() {
   useEffect(() => {
     const fetchAudioFiles = async () => {
       try {
-        const jsonPath = '/data/dailyMelodies/current.json';
+        const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
         const response = await fetch(jsonPath);
         const data = await response.json();
         setAudioFiles(data.melodyParts);
@@ -73,7 +71,7 @@ function App() {
     };
   
     fetchAudioFiles();
-  }, [testGameNumber]); // Add testGameNumber as dependency
+}, [currentGameNumber]);
 
   useEffect(() => {
     async function loadFullTune() {
@@ -193,6 +191,30 @@ function App() {
       }
     }
   }, [isTestButtonAvailable, isTestMode]);
+
+  const handleNextGame = () => {
+    if (currentGameNumber < 3) {
+      setCurrentGameNumber(prev => prev + 1);
+      setShowStartScreen(true);
+      setIsGameComplete(false);
+      setShowEndAnimation(false);
+      // Reset game states
+      setScore(0);
+      setBarHearts([4, 4, 4, 4]);
+      setCurrentBarIndex(0);
+      setCurrentNoteIndex(0);
+      setCompletedBars([false, false, false, false]);
+      setGameMode('initial');
+      setIsGameStarted(false);
+      setIsTestMode(false);
+      setIsTestButtonAvailable(false);
+      setIsFlipped(false);
+      setFailedBars([false, false, false, false]);
+    } else {
+      // For now, just log that we've reached the end
+      console.log('All games completed - should redirect to survey');
+    }
+  };
 
   const handlePlay = useCallback(() => {
     if (isTestMode) {
@@ -403,6 +425,8 @@ const renderBar = useCallback((BarComponent, index) => {
           <EndGameAnimation 
             score={score} 
             barHearts={barHearts} 
+            onNext={handleNextGame}
+            currentGameNumber={currentGameNumber}
           />
         )}
       </div>
