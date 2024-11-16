@@ -1,27 +1,31 @@
 import React from 'react';
-import TestButton from './TestButton';
-import PlayButton from './PlayButton';
+import ListenButton from './ListenButton';
+import PracticeButton from './PracticeButton';
+import PerformButton from './PerformButton';
 
 const Controls = ({ 
-  onTest, 
-  onPlay, 
-  isTestButtonUsed, 
-  isTestButtonAvailable,  // New prop
-  currentBarIndex, 
-  isAudioLoaded, 
-  isPlayButtonAnimated 
+  onListen,
+  onPractice,
+  onPerform,
+  isListenAnimated,
+  isPracticeAvailable,
+  isPerformAvailable,
+  isAudioLoaded
 }) => {
   return (
     <div className="button-container">
-      <TestButton 
-        onClick={onTest} 
-        isDisabled={!isTestButtonAvailable || isTestButtonUsed}  // Updated condition
+      <PracticeButton 
+        onClick={onPractice}
+        isAvailable={isPracticeAvailable}
       />
-      <PlayButton 
-        onClick={onPlay}
-        currentBarIndex={currentBarIndex}
-        isAudioLoaded={isAudioLoaded}
-        isAnimated={isPlayButtonAnimated}
+      <ListenButton 
+        onClick={onListen}
+        isAnimated={isListenAnimated}
+        disabled={!isAudioLoaded}
+      />
+      <PerformButton 
+        onClick={onPerform}
+        isAvailable={isPerformAvailable}
       />
     </div>
   );

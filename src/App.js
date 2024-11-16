@@ -9,33 +9,56 @@ import StartScreen from './components/StartScreen';
 
 
 function App() {
+  // Audio-related states
   const [audioFiles, setAudioFiles] = useState([]);
   const [fullTunePath, setFullTunePath] = useState('');
   const [fullTuneAudio, setFullTuneAudio] = useState(null);
-  const [showStartScreen, setShowStartScreen] = useState(true);
-  const [gameMode, setGameMode] = useState('initial');
-  const [isGameStarted, setIsGameStarted] = useState(false);
-  const [isTestMode, setIsTestMode] = useState(false);
-  const [barHearts, setBarHearts] = useState([4, 4, 4, 4]);
-  const [score, setScore] = useState(0);
-  const [correctSequence, setCorrectSequence] = useState([]);
-  const [currentBarIndex, setCurrentBarIndex] = useState(0);
-  const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [currentBarAudio, setCurrentBarAudio] = useState(null);
   const [wrongNoteAudio, setWrongNoteAudio] = useState(null);
-  const [isGameComplete, setIsGameComplete] = useState(false);
-  const [completedBars, setCompletedBars] = useState([]);
-  const [isPlayButtonAnimated, setIsPlayButtonAnimated] = useState(true);
-  const [isTestButtonAvailable, setIsTestButtonAvailable] = useState(false);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isGameEnded, setIsGameEnded] = useState(false);
   const [barCompleteAudio, setBarCompleteAudio] = useState(null);
   const [barFailedAudio, setBarFailedAudio] = useState(null);
-  const [showEndAnimation, setShowEndAnimation] = useState(false);
   const [audioContext, setAudioContext] = useState(null);
+
+  // Game state and progress
+  const [showStartScreen, setShowStartScreen] = useState(true);
+  const [gameMode, setGameMode] = useState('initial');
+  const [gamePhase, setGamePhase] = useState('initial'); // 'initial', 'practice', 'perform'
+  const [barHearts, setBarHearts] = useState([4, 4, 4, 4]);
+  const [score, setScore] = useState(0);
+  const [currentBarIndex, setCurrentBarIndex] = useState(0);
+  const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [isBarFailing, setIsBarFailing] = useState(false);
   const [failedBars, setFailedBars] = useState([false, false, false, false]);
   const [currentGameNumber, setCurrentGameNumber] = useState(1);
+  
+  // Sequence and completion tracking
+  const [correctSequence, setCorrectSequence] = useState([]);
+  const [completedBars, setCompletedBars] = useState([]);
+  const [isGameComplete, setIsGameComplete] = useState(false);
+  const [isGameEnded, setIsGameEnded] = useState(false);
+  const [showEndAnimation, setShowEndAnimation] = useState(false);
+
+  // UI and interaction states
+  const [isListenAnimated, setIsListenAnimated] = useState(true);
+  const [isPracticeAvailable, setIsPracticeAvailable] = useState(true);
+
+  useEffect(() => {
+    const fetchAudioFiles = async () => {
+      try {
+        const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
+        console.log('Attempting to fetch JSON from:', jsonPath);
+        const response = await fetch(jsonPath);
+        const data = await response.json();
+        console.log('Loaded audio files:', data);
+        setAudioFiles(data.melodyParts);
+        setFullTunePath(data.fullTune);
+      } catch (error) {
+        console.error('Failed to load current.json:', error);
+      }
+    };
+  
+    fetchAudioFiles();
+}, [currentGameNumber]);
  
   const initializeAudioContext = useCallback(() => {
     if (!audioContext) {
@@ -57,38 +80,58 @@ function App() {
     { id: 8, color: 'red', noteNumber: 8 },
   ];
 
-  useEffect(() => {
-    const fetchAudioFiles = async () => {
-      try {
-        const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
-        const response = await fetch(jsonPath);
-        const data = await response.json();
-        setAudioFiles(data.melodyParts);
-        setFullTunePath(data.fullTune);
-      } catch (error) {
-        console.error('Failed to load current.json:', error);
-      }
-    };
-  
-    fetchAudioFiles();
-}, [currentGameNumber]);
+  const handleListen = useCallback(() => {
+    // Only Listen button plays the melody
+    if (currentBarAudio && audioContext) {
+        audioContext.resume().then(() => {
+            const source = audioContext.createBufferSource();
+            source.buffer = currentBarAudio;
+            source.connect(audioContext.destination);
+            source.start();
+        });
+    }
+    
+    setIsListenAnimated(false);
+    setIsPracticeAvailable(true);
+}, [currentBarAudio, audioContext]);
 
-  useEffect(() => {
-    async function loadFullTune() {
+const handlePractice = useCallback(() => {
+    // Just enter practice mode, no melody
+    setGamePhase('practice');
+    setGameMode('practice');
+    
+    setIsListenAnimated(false);
+    setIsPracticeAvailable(true);
+}, []);
+
+const handlePerform = useCallback(() => {
+    // Just enter perform mode, no melody
+    setGamePhase('perform');
+    setGameMode('play');
+    
+    setIsListenAnimated(false);
+    setCurrentNoteIndex(0);
+    setIsPracticeAvailable(false);  // Hide practice button during performance
+}, []);
+
+useEffect(() => {
+  async function loadFullTune() {
       if (!fullTunePath) return;
       try {
-        const response = await fetch(fullTunePath);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        setFullTuneAudio(audioBuffer);
+          console.log('Loading full tune from:', fullTunePath);  // Debug log
+          const response = await fetch(fullTunePath);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          setFullTuneAudio(audioBuffer);
+          console.log('Full tune loaded successfully');  // Debug log
       } catch (error) {
-        console.error('Failed to load full tune:', error);
+          console.error('Failed to load full tune:', error, fullTunePath);
       }
-    }
+  }
 
-    loadFullTune();
-  }, [fullTunePath]);
+  loadFullTune();
+}, [fullTunePath]);
 
   useEffect(() => {
     function setVH() {
@@ -169,192 +212,182 @@ function App() {
     }
   }, [currentBarIndex, correctSequence, loadAudio]);
 
-  const playCurrentBarAudio = useCallback(() => {
-    if (currentBarAudio && audioContext) {
-      audioContext.resume().then(() => {
-        const source = audioContext.createBufferSource();
-        source.buffer = currentBarAudio;
-        source.connect(audioContext.destination);
-        source.start();
-      });
-    }
-  }, [currentBarAudio, audioContext]);
-
-  const handleTest = useCallback(() => {
-    if (isTestButtonAvailable) {
-      setIsTestMode(prev => !prev);
-      if (isTestMode) {
-        setGameMode('initial');
-        setCurrentNoteIndex(0);
-      } else {
-        setGameMode('practice');
-      }
-    }
-  }, [isTestButtonAvailable, isTestMode]);
-
-  const handleNextGame = () => {
-    if (currentGameNumber < 3) {
-      setCurrentGameNumber(prev => prev + 1);
-      setShowStartScreen(true);
-      setIsGameComplete(false);
-      setShowEndAnimation(false);
-      // Reset game states
-      setScore(0);
-      setBarHearts([4, 4, 4, 4]);
+  const handleStartGame = () => {
+    const ctx = initializeAudioContext();
+    ctx.resume().then(() => {
+      setShowStartScreen(false);
+      setGameMode('initial');
+      setGamePhase('initial');
       setCurrentBarIndex(0);
       setCurrentNoteIndex(0);
-      setCompletedBars([false, false, false, false]);
-      setGameMode('initial');
-      setIsGameStarted(false);
-      setIsTestMode(false);
-      setIsTestButtonAvailable(false);
-      setIsFlipped(false);
-      setFailedBars([false, false, false, false]);
-    } else {
-      // For now, just log that we've reached the end
-      console.log('All games completed - should redirect to survey');
-    }
-  };
-
-  const handlePlay = useCallback(() => {
-    if (isTestMode) {
-      playCurrentBarAudio();
-      return;
-    }
-
-    setGameMode('play');
-    setIsGameStarted(true);
-    setCurrentNoteIndex(0);
-    setIsTestButtonAvailable(true);
-    setIsFlipped(true);
-    playCurrentBarAudio();
-    setIsPlayButtonAnimated(false);
-    if (!isGameStarted) {
-      setCurrentBarIndex(0);
-    }
-  }, [isTestMode, isGameStarted, playCurrentBarAudio]);
-
+      setScore(0);
+      setBarHearts([4, 4, 4, 4]);
+      setIsGameComplete(false);
+      setIsGameEnded(false);
+      setShowEndAnimation(false);
+      setIsListenAnimated(true);
+      setIsPracticeAvailable(true);
+    });
+  }; 
   const moveToNextBar = useCallback((isSuccess = true) => {
     setCompletedBars(prevCompletedBars => {
-      const newCompletedBars = [...prevCompletedBars];
-      newCompletedBars[currentBarIndex] = true;
-      return newCompletedBars;
+        const newCompletedBars = [...prevCompletedBars];
+        newCompletedBars[currentBarIndex] = true;
+        return newCompletedBars;
     });
 
     if (barCompleteAudio && isSuccess) {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioContext.createBufferSource();
-      source.buffer = barCompleteAudio;
-      source.connect(audioContext.destination);
-      source.start();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createBufferSource();
+        source.buffer = barCompleteAudio;
+        source.connect(audioContext.destination);
+        source.start();
     }
 
     const nextBarIndex = currentBarIndex + 1;
     if (nextBarIndex < correctSequence.length) {
-      setCurrentBarIndex(nextBarIndex);
-      setCurrentNoteIndex(0);
-      setBarHearts(prevBarHearts => {
-        const newBarHearts = [...prevBarHearts];
-        newBarHearts[nextBarIndex] = 4;
-        return newBarHearts;
-      });
-      loadAudio(nextBarIndex);
-      setIsPlayButtonAnimated(true);
-      setIsTestMode(false);
-      setIsTestButtonAvailable(false);
-      setGameMode('initial');
-    } else {
-      setIsGameComplete(true);
-      setIsGameEnded(true);
-      setIsFlipped(true);
-      setGameMode('ended');
-      
-      setTimeout(() => {
-        setShowEndAnimation(true);
-        if (fullTuneAudio) {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const source = audioContext.createBufferSource();
-          source.buffer = fullTuneAudio;
-          source.connect(audioContext.destination);
-          source.start();
-        }
-      }, 2000);
-    }
-  }, [currentBarIndex, correctSequence.length, loadAudio, barCompleteAudio, fullTuneAudio]);
-
-  const handleNotePlay = useCallback((noteNumber) => {
-    // If bar is failing, don't do anything
-    if (isBarFailing) return;
-
-    // Play the note sound
-    const audio = new Audio(`/assets/audio/n${noteNumber}.mp3`);
-    audio.play().catch(error => console.error("Audio playback failed:", error));
-
-    // If in test mode, only play the sound
-    if (isTestMode) {
-      console.log(`Test mode: Note ${noteNumber} played`);
-      return;
-    }
-
-    if (!isGameStarted || isGameComplete || correctSequence.length === 0) return;
-
-    const currentSequence = correctSequence[currentBarIndex];
-    const currentNote = currentSequence[currentNoteIndex];
-    const isCorrectNote = noteNumber === currentNote.number;
-
-    if (isCorrectNote) {
-        const newNoteIndex = currentNoteIndex + 1;
-        setCurrentNoteIndex(newNoteIndex);
-
-        if (newNoteIndex === currentSequence.length) {
-          setScore(prevScore => prevScore + barHearts[currentBarIndex]);
-          moveToNextBar(true);
-        }
-    } else {
-        if (wrongNoteAudio) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createBufferSource();
-            source.buffer = wrongNoteAudio;
-            source.connect(audioContext.destination);
-            source.start();
-        }
-
+        setCurrentBarIndex(nextBarIndex);
         setCurrentNoteIndex(0);
-        setIsPlayButtonAnimated(true);
-
         setBarHearts(prevBarHearts => {
-          const newBarHearts = [...prevBarHearts];
-          newBarHearts[currentBarIndex] = Math.max(0, newBarHearts[currentBarIndex] - 1);
-          
-          if (newBarHearts[currentBarIndex] === 0) {
-              setIsBarFailing(true);
-              setFailedBars(prev => {
-                const newFailedBars = [...prev];
-                newFailedBars[currentBarIndex] = true;
-                return newFailedBars;
-              });
-              
-              setTimeout(() => {
-                  if (barFailedAudio) {
-                      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                      const source = audioContext.createBufferSource();
-                      source.buffer = barFailedAudio;
-                      source.connect(audioContext.destination);
-                      source.start();
-                  }
-              }, 300);
-      
-              setTimeout(() => {
-                  setIsBarFailing(false);
-                  moveToNextBar(false);
-              }, 1500);
-          }
-          
-          return newBarHearts;
-      });
+            const newBarHearts = [...prevBarHearts];
+            newBarHearts[nextBarIndex] = 4;
+            return newBarHearts;
+        });
+        loadAudio(nextBarIndex);
+        
+        // Reset for new bar
+        setGamePhase('initial');
+        setGameMode('initial');
+        setIsListenAnimated(true);
+        setIsPracticeAvailable(true); 
+    } else {
+        setIsGameComplete(true);
+        setIsGameEnded(true);
+        setGameMode('ended');
+        
+        setTimeout(() => {
+            setShowEndAnimation(true);
+            if (fullTuneAudio) {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createBufferSource();
+                source.buffer = fullTuneAudio;
+                source.connect(audioContext.destination);
+                source.start();
+            }
+        }, 2000);
     }
-  }, [currentBarIndex, currentNoteIndex, correctSequence, wrongNoteAudio, barHearts, 
-    moveToNextBar, barFailedAudio, isBarFailing, isTestMode, isGameComplete, isGameStarted]);
+}, [currentBarIndex, correctSequence.length, loadAudio, barCompleteAudio, fullTuneAudio]);
+
+const handleNextGame = () => {
+  if (currentGameNumber < 3) {
+      setTimeout(() => {
+          setCurrentGameNumber(prev => prev + 1);
+          setIsGameComplete(false);
+          setShowEndAnimation(false);
+          setIsGameEnded(false);
+          
+          // Reset game states
+          setScore(0);
+          setBarHearts([4, 4, 4, 4]);
+          setCurrentBarIndex(0);
+          setCurrentNoteIndex(0);
+          setCompletedBars([false, false, false, false]);
+          
+          // Reset game phases and mode
+          setGameMode('initial');
+          setGamePhase('initial');
+          setFailedBars([false, false, false, false]);
+          
+          // Reset UI states
+          setIsListenAnimated(true);
+          setIsPracticeAvailable(true);
+
+          // Initialize audio
+          const ctx = initializeAudioContext();
+          ctx.resume();
+      }, 2000); // Keep the delay to allow the end animation to complete
+      
+  } else {
+      console.log('All games completed - should redirect to survey');
+  }
+};
+const handleNotePlay = useCallback((noteNumber) => {
+  // Only allow note playing in practice or perform modes
+  if (gamePhase === 'practice' || gamePhase === 'perform') {
+      // Play the note sound
+      const audio = new Audio(`/assets/audio/n${noteNumber}.mp3`);
+      audio.play().catch(error => console.error("Audio playback failed:", error));
+
+      // Handle game logic only in perform phase
+      if (gamePhase === 'perform' && !isBarFailing) {
+          const currentSequence = correctSequence[currentBarIndex];
+          const currentNote = currentSequence[currentNoteIndex];
+          const isCorrectNote = noteNumber === currentNote.number;
+
+          if (isCorrectNote) {
+              const newNoteIndex = currentNoteIndex + 1;
+              setCurrentNoteIndex(newNoteIndex);
+
+              if (newNoteIndex === currentSequence.length) {
+                  setScore(prevScore => prevScore + barHearts[currentBarIndex]);
+                  moveToNextBar(true);
+              }
+          } else {
+              if (wrongNoteAudio) {
+                  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                  const source = audioContext.createBufferSource();
+                  source.buffer = wrongNoteAudio;
+                  source.connect(audioContext.destination);
+                  source.start();
+              }
+
+              setCurrentNoteIndex(0);
+
+              setBarHearts(prevBarHearts => {
+                  const newBarHearts = [...prevBarHearts];
+                  newBarHearts[currentBarIndex] = Math.max(0, newBarHearts[currentBarIndex] - 1);
+                  
+                  if (newBarHearts[currentBarIndex] === 0) {
+                      setIsBarFailing(true);
+                      setFailedBars(prev => {
+                          const newFailedBars = [...prev];
+                          newFailedBars[currentBarIndex] = true;
+                          return newFailedBars;
+                      });
+                      
+                      setTimeout(() => {
+                          if (barFailedAudio) {
+                              const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                              const source = audioContext.createBufferSource();
+                              source.buffer = barFailedAudio;
+                              source.connect(audioContext.destination);
+                              source.start();
+                          }
+                      }, 300);
+              
+                      setTimeout(() => {
+                          setIsBarFailing(false);
+                          moveToNextBar(false);
+                      }, 1500);
+                  }
+                  
+                  return newBarHearts;
+              });
+          }
+      }
+  }
+}, [
+  gamePhase,
+  isBarFailing,
+  correctSequence,
+  currentBarIndex,
+  currentNoteIndex,
+  wrongNoteAudio,
+  barFailedAudio,
+  moveToNextBar,
+  barHearts
+]);
+
 const renderBar = useCallback((BarComponent, index) => {
   return (
     <BarComponent 
@@ -369,21 +402,6 @@ const renderBar = useCallback((BarComponent, index) => {
     />
   );
 }, [currentBarIndex, currentNoteIndex, completedBars, correctSequence, isGameComplete, isBarFailing, failedBars]);
-  const handleStartGame = () => {
-    const ctx = initializeAudioContext();
-    ctx.resume().then(() => {
-      setShowStartScreen(false);
-      setGameMode('initial');
-      setIsGameStarted(false);
-      setCurrentBarIndex(0);
-      setCurrentNoteIndex(0);
-      setScore(0);
-      setBarHearts([4, 4, 4, 4]);
-      setIsGameComplete(false);
-      setIsGameEnded(false);
-      setShowEndAnimation(false);
-    });
-  };
   
   if (showStartScreen) {
     return (
@@ -404,18 +422,18 @@ const renderBar = useCallback((BarComponent, index) => {
           renderBar={renderBar}
           isBarFailed={isBarFailing}
         />
-        <Controls 
-          onTest={handleTest}
-          onPlay={handlePlay}
-          isTestMode={isTestMode}
-          isTestButtonAvailable={isTestButtonAvailable}
-          currentBarIndex={currentBarIndex}
-          isAudioLoaded={!!currentBarAudio}
-          isPlayButtonAnimated={isPlayButtonAnimated}
-        />
+          <Controls 
+  onListen={handleListen}
+  onPractice={handlePractice}
+  onPerform={handlePerform}
+  isListenAnimated={isListenAnimated}
+  isPracticeAvailable={isPracticeAvailable}
+  isPerformAvailable={true}
+  isAudioLoaded={!!currentBarAudio}
+/>
+      
         <VirtualInstrument 
           notes={notes}
-          isFlipped={isFlipped}
           onNotePlay={handleNotePlay}
           isGameEnded={isGameEnded}
           isBarFailing={isBarFailing}

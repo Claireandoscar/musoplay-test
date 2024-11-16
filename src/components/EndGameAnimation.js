@@ -10,11 +10,11 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
   const getGameMessage = useCallback(() => {
     switch(currentGameNumber) {
       case 1:
-        return "great start!\nlet's try something trickier";
+        return "great start!\nHARD LEVEL AHEAD!";
       case 2:
         return "well done!\none more challenge to go";
       case 3:
-        return "congratulations!\nyou've completed all games";
+        return "congratulations!\non to the survey";
       default:
         return "well done!";
     }

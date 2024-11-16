@@ -93,11 +93,7 @@ body {
   height: 40px;
   display: flex;
   justify-content: space-between;
-}
-
-.test-button, .play-button {
-  width: 60px;
-  height: 40px;
+  gap: 15px;  /* Add this for equal spacing between buttons */
 }
 
 /* Virtual instrument */
@@ -207,4 +203,57 @@ body {
     transform: scale(0.9);
     transform-origin: top center;
   }
+}
+/* Game Phase Styles */
+.game-container.practice .bars-container,
+.game-container.practice .lives-container,
+.game-container.practice .progress-bar {
+  opacity: 0.3;
+  transition: opacity 0.5s ease;
+}
+
+.game-container.play * {
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+/* Button Hover Effects */
+.listen-button:hover,
+.practice-button:hover,
+.perform-button:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+/* Listen Button Animation */
+.listen-button.animated {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+/* Transition states */
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* Ensure virtual instrument stays interactive */
+.virtual-instrument {
+  pointer-events: auto !important;
 }
