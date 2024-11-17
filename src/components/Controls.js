@@ -1,32 +1,43 @@
 import React from 'react';
-import ListenButton from './ListenButton';
-import PracticeButton from './PracticeButton';
-import PerformButton from './PerformButton';
 
-const Controls = ({ 
-  onListen,
-  onPractice,
+const Controls = ({
+  onListenPractice,
   onPerform,
-  isListenAnimated,
-  isPracticeAvailable,
+  isListenPracticeMode,
   isPerformAvailable,
-  isAudioLoaded
+  isAudioLoaded,
+  gamePhase
 }) => {
+  console.log({
+    isListenPracticeMode,
+    isPerformAvailable,
+    isAudioLoaded,
+    gamePhase
+  });
+
   return (
-    <div className="button-container">
-      <PracticeButton 
-        onClick={onPractice}
-        isAvailable={isPracticeAvailable}
-      />
-      <ListenButton 
-        onClick={onListen}
-        isAnimated={isListenAnimated}
-        disabled={!isAudioLoaded}
-      />
-      <PerformButton 
+    <div className="controls-container">
+      <button
+        className={`control-button listen-practice ${isListenPracticeMode ? 'active' : ''}`}
+        onClick={onListenPractice}
+        disabled={!isAudioLoaded || gamePhase === 'perform'}
+        style={{ 
+          backgroundImage: `url(${process.env.PUBLIC_URL}/assets/images/ui/listen-practice.svg)`
+        }}
+      >
+        <span className="visually-hidden">Listen & Practice</span>
+      </button>
+      
+      <button
+        className={`control-button perform ${gamePhase === 'perform' ? 'active' : ''}`}
         onClick={onPerform}
-        isAvailable={isPerformAvailable}
-      />
+        disabled={!isListenPracticeMode}
+        style={{ 
+          backgroundImage: `url(${process.env.PUBLIC_URL}/assets/images/ui/perform.svg)`
+        }}
+      >
+        <span className="visually-hidden">Perform</span>
+      </button>
     </div>
   );
 };

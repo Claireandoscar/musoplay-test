@@ -28,6 +28,18 @@ body {
   position: relative;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 
 .bars-container {
   position: relative;
@@ -84,17 +96,57 @@ body {
 .bar3 { top: 370px; }
 .bar4 { top: 440px; }
 
-/* Buttons */
-.button-container {
+.controls-container {
   position: absolute;
   top: 560px;
   left: 60px;
   width: 270px;
   height: 40px;
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;  /* Add this for equal spacing between buttons */
 }
+
+/* In your App.css */
+.control-button {
+  position: absolute;
+  height: 40px;
+  border: none;
+  padding: 0;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.3s ease; /* Added opacity transition */
+}
+
+/* Add this new rule for the fade effect */
+.control-button.listen-practice:disabled {
+  opacity: 0.2;  /* More faded than the regular disabled state */
+  pointer-events: none;  /* Ensures the button can't be interacted with */
+}
+
+.control-button.listen-practice {
+  left: 0;
+  width: 170px;
+}
+
+.control-button.perform {
+  left: 180px;
+  width: 90px;
+}
+
+.control-button:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.control-button:not(:disabled):hover {
+  transform: scale(1.05);
+}
+
+.control-button.active {
+  transform: scale(0.95);
+}
+
 
 /* Virtual instrument */
 .virtual-instrument {
@@ -217,23 +269,23 @@ body {
   transition: opacity 0.5s ease;
 }
 
-/* Button Hover Effects */
-.listen-button:hover,
-.practice-button:hover,
-.perform-button:hover {
-  transform: scale(1.05);
-  transition: transform 0.2s ease;
-}
-/* Listen Button Animation */
-.listen-button.animated {
-  animation: pulse 1s infinite;
-}
 
 @keyframes pulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  50% { transform: scale(1.05); }  /* Reduced from 1.1 to 1.05 */
   100% { transform: scale(1); }
 }
+
+/* Add this right after the pulse keyframes */
+.control-button.listen-practice.animated {
+  animation: pulse 1s infinite;
+}
+
+/* Your existing Transition states continue below */
+.fade-enter {
+opacity: 0;
+}
+
 /* Transition states */
 .fade-enter {
   opacity: 0;

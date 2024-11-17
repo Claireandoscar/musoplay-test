@@ -39,8 +39,7 @@ function App() {
   const [showEndAnimation, setShowEndAnimation] = useState(false);
 
   // UI and interaction states
-  const [isListenAnimated, setIsListenAnimated] = useState(true);
-  const [isPracticeAvailable, setIsPracticeAvailable] = useState(true);
+  const [isListenPracticeMode, setIsListenPracticeMode] = useState(false);
 
   useEffect(() => {
     const fetchAudioFiles = async () => {
@@ -80,38 +79,29 @@ function App() {
     { id: 8, color: 'red', noteNumber: 8 },
   ];
 
-  const handleListen = useCallback(() => {
-    // Only Listen button plays the melody
-    if (currentBarAudio && audioContext) {
-        audioContext.resume().then(() => {
-            const source = audioContext.createBufferSource();
-            source.buffer = currentBarAudio;
-            source.connect(audioContext.destination);
-            source.start();
-        });
+  const handleListenPractice = useCallback(() => {
+    if (!isListenPracticeMode) {
+        // First click - play melody and enter practice mode
+        if (currentBarAudio && audioContext) {
+            audioContext.resume().then(() => {
+                const source = audioContext.createBufferSource();
+                source.buffer = currentBarAudio;
+                source.connect(audioContext.destination);
+                source.start();
+            });
+        }
     }
     
-    setIsListenAnimated(false);
-    setIsPracticeAvailable(true);
-}, [currentBarAudio, audioContext]);
-
-const handlePractice = useCallback(() => {
-    // Just enter practice mode, no melody
+    setIsListenPracticeMode(prev => !prev);
     setGamePhase('practice');
     setGameMode('practice');
-    
-    setIsListenAnimated(false);
-    setIsPracticeAvailable(true);
-}, []);
+}, [currentBarAudio, audioContext, isListenPracticeMode]);
 
 const handlePerform = useCallback(() => {
-    // Just enter perform mode, no melody
     setGamePhase('perform');
     setGameMode('play');
-    
-    setIsListenAnimated(false);
+    setIsListenPracticeMode(false);  // This will disable Listen & Practice
     setCurrentNoteIndex(0);
-    setIsPracticeAvailable(false);  // Hide practice button during performance
 }, []);
 
 useEffect(() => {
@@ -215,20 +205,34 @@ useEffect(() => {
   const handleStartGame = () => {
     const ctx = initializeAudioContext();
     ctx.resume().then(() => {
-      setShowStartScreen(false);
-      setGameMode('initial');
-      setGamePhase('initial');
-      setCurrentBarIndex(0);
-      setCurrentNoteIndex(0);
-      setScore(0);
-      setBarHearts([4, 4, 4, 4]);
-      setIsGameComplete(false);
-      setIsGameEnded(false);
-      setShowEndAnimation(false);
-      setIsListenAnimated(true);
-      setIsPracticeAvailable(true);
+        // Reset screen and game mode states
+        setShowStartScreen(false);
+        setGameMode('initial');
+        setGamePhase('initial');
+        
+        // Reset game progress states
+        setCurrentBarIndex(0);
+        setCurrentNoteIndex(0);
+        setScore(0);
+        setBarHearts([4, 4, 4, 4]);
+        
+        // Reset game completion states
+        setIsGameComplete(false);
+        setIsGameEnded(false);
+        setShowEndAnimation(false);
+        
+        // Reset UI state for new combined button
+        setIsListenPracticeMode(false);
+        
+        // Reset any failed states if they exist
+        setFailedBars([false, false, false, false]);
+        setIsBarFailing(false);
+        
+        // Reset completion tracking
+        setCompletedBars(new Array(4).fill(false));
     });
-  }; 
+};
+  
   const moveToNextBar = useCallback((isSuccess = true) => {
     setCompletedBars(prevCompletedBars => {
         const newCompletedBars = [...prevCompletedBars];
@@ -255,15 +259,15 @@ useEffect(() => {
         });
         loadAudio(nextBarIndex);
         
-        // Reset for new bar
+        // Updated reset states for new bar
         setGamePhase('initial');
         setGameMode('initial');
-        setIsListenAnimated(true);
-        setIsPracticeAvailable(true); 
+        setIsListenPracticeMode(false);  // Reset listen/practice mode
     } else {
         setIsGameComplete(true);
         setIsGameEnded(true);
         setGameMode('ended');
+        setIsListenPracticeMode(false);  // Reset listen/practice mode
         
         setTimeout(() => {
             setShowEndAnimation(true);
@@ -298,9 +302,8 @@ const handleNextGame = () => {
           setGamePhase('initial');
           setFailedBars([false, false, false, false]);
           
-          // Reset UI states
-          setIsListenAnimated(true);
-          setIsPracticeAvailable(true);
+          // Reset UI states - updated for new combined button
+          setIsListenPracticeMode(false);
 
           // Initialize audio
           const ctx = initializeAudioContext();
@@ -311,6 +314,7 @@ const handleNextGame = () => {
       console.log('All games completed - should redirect to survey');
   }
 };
+
 const handleNotePlay = useCallback((noteNumber) => {
   // Only allow note playing in practice or perform modes
   if (gamePhase === 'practice' || gamePhase === 'perform') {
@@ -422,14 +426,13 @@ const renderBar = useCallback((BarComponent, index) => {
           renderBar={renderBar}
           isBarFailed={isBarFailing}
         />
-          <Controls 
-  onListen={handleListen}
-  onPractice={handlePractice}
-  onPerform={handlePerform}
-  isListenAnimated={isListenAnimated}
-  isPracticeAvailable={isPracticeAvailable}
-  isPerformAvailable={true}
-  isAudioLoaded={!!currentBarAudio}
+      <Controls 
+    onListenPractice={handleListenPractice}
+    onPerform={handlePerform}
+    isListenPracticeMode={isListenPracticeMode}
+    isPerformAvailable={true}
+    isAudioLoaded={!!currentBarAudio}
+    gamePhase={gamePhase}
 />
       
         <VirtualInstrument 
