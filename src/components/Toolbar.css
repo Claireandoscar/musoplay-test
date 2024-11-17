@@ -1,0 +1,35 @@
+.toolbar {
+  position: absolute;
+  top: 40px;
+  left: 60px;
+  width: 270px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10; /* Add this to ensure it's above other elements */
+}
+
+.help-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #117B49;
+  background: none;
+  color: black;
+  font-family: 'patrick-hand-sc', sans-serif;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 11; /* Add this to ensure button is clickable */
+  position: relative; /* Add this */
+}
+
+.toolbar-logo {
+  height: 24px;
+  width: auto;
+  object-fit: contain;
+}

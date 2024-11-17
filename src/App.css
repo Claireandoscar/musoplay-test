@@ -15,17 +15,19 @@ body {
 
 .game-wrapper {
   width: 100%;
-  height: 100vh; /* We'll keep this, but add a fallback */
-  height: calc(var(--vh, 1vh) * 100);
+  min-height: 100vh;  /* changed from height to min-height */
+  min-height: calc(var(--vh, 1vh) * 100);
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 20px 0;  /* Add some padding to prevent cutting off */
 }
 
 .game-container {
   width: 390px;
   height: 844px;
   position: relative;
+  transform-origin: top center;  /* Keep the top alignment when scaling */
 }
 
 .visually-hidden {
@@ -49,7 +51,7 @@ body {
 
 .lives-container {
   position: absolute;
-  top: 10%;  /* Changed from 90px to 10% */
+  top: 120px;  /* Changed from 90px to 10% */
   left: 60px;
   width: 270px;
   height: 60px;

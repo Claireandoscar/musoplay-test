@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './App.css';
+import Toolbar from './components/Toolbar';
 import GameBoard from './components/GameBoard';
 import Controls from './components/Controls';
 import VirtualInstrument from './components/VirtualInstrument';
@@ -30,6 +31,8 @@ function App() {
   const [isBarFailing, setIsBarFailing] = useState(false);
   const [failedBars, setFailedBars] = useState([false, false, false, false]);
   const [currentGameNumber, setCurrentGameNumber] = useState(1);
+  // In App.js, near your other useState declarations
+  const [showInstructions, setShowInstructions] = useState(false);
   
   // Sequence and completion tracking
   const [correctSequence, setCorrectSequence] = useState([]);
@@ -420,21 +423,24 @@ const renderBar = useCallback((BarComponent, index) => {
   return (
     <div className="game-wrapper">
       <div className={`game-container ${gameMode}`}>
+      <Toolbar onShowInstructions={() => {
+  console.log('Setting showInstructions to true');  // Debug log
+  setShowInstructions(true);
+}} />
         <GameBoard 
           barHearts={barHearts} 
           currentBarIndex={currentBarIndex} 
           renderBar={renderBar}
           isBarFailed={isBarFailing}
         />
-      <Controls 
-    onListenPractice={handleListenPractice}
-    onPerform={handlePerform}
-    isListenPracticeMode={isListenPracticeMode}
-    isPerformAvailable={true}
-    isAudioLoaded={!!currentBarAudio}
-    gamePhase={gamePhase}
-/>
-      
+        <Controls 
+          onListenPractice={handleListenPractice}
+          onPerform={handlePerform}
+          isListenPracticeMode={isListenPracticeMode}
+          isPerformAvailable={true}
+          isAudioLoaded={!!currentBarAudio}
+          gamePhase={gamePhase}
+        />
         <VirtualInstrument 
           notes={notes}
           onNotePlay={handleNotePlay}
@@ -450,8 +456,37 @@ const renderBar = useCallback((BarComponent, index) => {
             currentGameNumber={currentGameNumber}
           />
         )}
+        {/* Add instructions popup */}
+        {showInstructions && (
+          <div className="instructions-popup">
+            <button className="close-button" onClick={() => setShowInstructions(false)}>
+              ×
+            </button>
+            <div className="instructions-content">
+              <h2>HOW TO PLAY</h2>
+              <div className="instruction-flow">
+                <p>
+                  Press <img 
+                    src="/assets/images/ui/listen-practice.svg" 
+                    alt="Listen & Practice" 
+                    className="inline-button large"
+                  /> to hear the melody, try to find the right notes using the virtual instrument, then when you're ready press <img 
+                    src="/assets/images/ui/perform.svg" 
+                    alt="Perform" 
+                    className="inline-button small"
+                  /> to play the melody for real, but be careful you could lose a <img 
+                    src="/assets/images/ui/heart.svg" 
+                    alt="Heart" 
+                    className="inline-icon"
+                  /> if you make a mistake!
+                </p>
+              </div>
+              <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
+);
 }
 export default App;
