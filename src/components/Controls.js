@@ -31,7 +31,7 @@ const Controls = ({
       <button
         className={`control-button perform ${gamePhase === 'perform' ? 'active' : ''}`}
         onClick={onPerform}
-        disabled={!isListenPracticeMode}
+        disabled={gamePhase !== 'perform' && !isListenPracticeMode} // Modified this line
         style={{ 
           backgroundImage: `url(${process.env.PUBLIC_URL}/assets/images/ui/perform.svg)`
         }}

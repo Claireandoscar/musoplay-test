@@ -84,8 +84,25 @@ function App() {
   ];
 
   const handleListenPractice = useCallback(() => {
-    if (!isListenPracticeMode) {
-        // First click - play melody and enter practice mode
+    // Always play the melody when clicked
+    if (currentBarAudio && audioContext) {
+        audioContext.resume().then(() => {
+            const source = audioContext.createBufferSource();
+            source.buffer = currentBarAudio;
+            source.connect(audioContext.destination);
+            source.start();
+        });
+    }
+
+    // Always ensure we're in practice mode
+    setGamePhase('practice');
+    setGameMode('practice');
+    setIsListenPracticeMode(true);  // Always keep it true after first activation
+}, [currentBarAudio, audioContext]);
+
+const handlePerform = useCallback(() => {
+    // If we're already in perform mode, just play the melody
+    if (gamePhase === 'perform') {
         if (currentBarAudio && audioContext) {
             audioContext.resume().then(() => {
                 const source = audioContext.createBufferSource();
@@ -94,19 +111,15 @@ function App() {
                 source.start();
             });
         }
+    } else {
+        // Initial transition to perform mode
+        setGamePhase('perform');
+        setGameMode('play');
+        setIsListenPracticeMode(false);  // Disable Listen & Practice
+        setCurrentNoteIndex(0);
     }
-    
-    setIsListenPracticeMode(prev => !prev);
-    setGamePhase('practice');
-    setGameMode('practice');
-}, [currentBarAudio, audioContext, isListenPracticeMode]);
+}, [gamePhase, currentBarAudio, audioContext]);
 
-const handlePerform = useCallback(() => {
-    setGamePhase('perform');
-    setGameMode('play');
-    setIsListenPracticeMode(false);  // This will disable Listen & Practice
-    setCurrentNoteIndex(0);
-}, []);
 
 useEffect(() => {
   async function loadFullTune() {
