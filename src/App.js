@@ -84,22 +84,21 @@ function App() {
   ];
 
   const handleListenPractice = useCallback(() => {
-    if (!isListenPracticeMode) {
-        // First click - play melody and enter practice mode
-        if (currentBarAudio && audioContext) {
-            audioContext.resume().then(() => {
-                const source = audioContext.createBufferSource();
-                source.buffer = currentBarAudio;
-                source.connect(audioContext.destination);
-                source.start();
-            });
-        }
+    // Always play the melody when clicked
+    if (currentBarAudio && audioContext) {
+        audioContext.resume().then(() => {
+            const source = audioContext.createBufferSource();
+            source.buffer = currentBarAudio;
+            source.connect(audioContext.destination);
+            source.start();
+        });
     }
-    
-    setIsListenPracticeMode(prev => !prev);
+
+    // Always ensure we're in practice mode
     setGamePhase('practice');
     setGameMode('practice');
-}, [currentBarAudio, audioContext, isListenPracticeMode]);
+    setIsListenPracticeMode(true);  // Always keep it true after first activation
+}, [currentBarAudio, audioContext]);
 
 const handlePerform = useCallback(() => {
     // If we're already in perform mode, just play the melody
