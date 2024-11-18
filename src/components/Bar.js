@@ -101,8 +101,8 @@ const Bar = ({
             key={index}
             onClick={() => handleNoteClick(index)}
             className={`note 
-              ${(index < currentNoteIndex && !isBarComplete && gamePhase === 'perform') || 
-                    isBarComplete || isGameComplete ? 'visible' : ''}
+              ${(index < currentNoteIndex && !isBarComplete && gamePhase === 'perform' && !isTouchTransition) || 
+                isBarComplete || isGameComplete ? 'visible' : ''}
               ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
               ${flippedNotes[index] ? 'flipped' : ''}
               ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`
