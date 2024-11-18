@@ -417,21 +417,6 @@ const handleNotePlay = useCallback((noteNumber) => {
   barHearts
 ]);
 
-const renderBar = useCallback((BarComponent, index) => {
-  return (
-    <BarComponent 
-      key={index}
-      isActive={currentBarIndex === index}
-      sequence={correctSequence[index] || []}
-      currentNoteIndex={currentBarIndex === index ? currentNoteIndex : 0}
-      isBarComplete={completedBars[index]}
-      isGameComplete={isGameComplete}
-      isBarFailing={isBarFailing}
-      hasFailed={failedBars[index]}  // Add this line
-    />
-  );
-}, [currentBarIndex, currentNoteIndex, completedBars, correctSequence, isGameComplete, isBarFailing, failedBars]);
-  
   if (showStartScreen) {
     return (
       <div className="game-wrapper">
@@ -450,11 +435,18 @@ const renderBar = useCallback((BarComponent, index) => {
   setShowInstructions(true);
 }} />
         <GameBoard 
-          barHearts={barHearts} 
-          currentBarIndex={currentBarIndex} 
-          renderBar={renderBar}
-          isBarFailed={isBarFailing}
-        />
+  barHearts={barHearts} 
+  currentBarIndex={currentBarIndex}
+  renderBar={{
+    correctSequence,
+    currentNoteIndex,
+    completedBars,
+    isGameComplete,
+    failedBars
+  }}
+  isBarFailed={isBarFailing}
+  gamePhase={gamePhase}
+/>
         <Controls 
           onListenPractice={handleListenPractice}
           onPerform={handlePerform}

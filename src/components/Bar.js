@@ -1,7 +1,16 @@
-import React, { useState, } from 'react';
-import './Bar2.css';
+import React, { useState } from 'react';
+import './Bar.css';
 
-const Bar2 = ({ isActive, sequence, currentNoteIndex, isBarComplete, isGameComplete, hasFailed }) => {
+const Bar = ({ 
+  barNumber,  // New prop: 1-4
+  isActive, 
+  sequence, 
+  currentNoteIndex, 
+  isBarComplete, 
+  isGameComplete, 
+  hasFailed,
+  gamePhase   // Add this to help with visibility control
+}) => {
   const [flippedNotes, setFlippedNotes] = useState({});
   const [flipSound] = useState(new Audio('/assets/audio/ui-sounds/note-flip.mp3'));
 
@@ -51,42 +60,23 @@ const Bar2 = ({ isActive, sequence, currentNoteIndex, isBarComplete, isGameCompl
         `/assets/images/bar-notes/quavers/n${note.fullNote}.svg` :
         `/assets/images/bar-notes/crochets/n${note.number}.svg`;
     
-    console.log('Note details:', {
-      isFlipped,
-      noteNumber: note.number,
-      noteName: noteNameMap[note.number],
-      isQuaver: note.isQuaverLeft || note.isQuaverRight,
-      path: path
-    });
-    
     return path;
   };
 
   const handleNoteClick = (index) => {
     if (isBarComplete || isGameComplete) {
-      console.log('Before flip - flippedNotes state:', flippedNotes);
-      console.log('Clicking note:', {
-        index,
-        currentState: flippedNotes[index],
-        newState: !flippedNotes[index]
-      });
-      
       flipSound.currentTime = 0;
       flipSound.play().catch(error => console.log('Audio play failed:', error));
       
-      setFlippedNotes(prev => {
-        const newState = {
-          ...prev,
-          [index]: !prev[index]
-        };
-        console.log('After flip - new flippedNotes state:', newState);
-        return newState;
-      });
+      setFlippedNotes(prev => ({
+        ...prev,
+        [index]: !prev[index]
+      }));
     }
   };
 
   return (
-    <div className={`bar bar2 ${isActive ? 'active' : ''}`}>
+    <div className={`bar bar${barNumber} ${isActive ? 'active' : ''}`}>
       <div className="line"></div>
       {hasFailed ? (
         [...Array(4)].map((_, index) => (
@@ -111,7 +101,8 @@ const Bar2 = ({ isActive, sequence, currentNoteIndex, isBarComplete, isGameCompl
             key={index}
             onClick={() => handleNoteClick(index)}
             className={`note 
-              ${index < currentNoteIndex || isBarComplete || isGameComplete ? 'visible' : ''} 
+              ${(index < currentNoteIndex && !isBarComplete && gamePhase === 'perform') || 
+                    isBarComplete || isGameComplete ? 'visible' : ''}
               ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
               ${flippedNotes[index] ? 'flipped' : ''}
               ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`
@@ -142,4 +133,4 @@ const Bar2 = ({ isActive, sequence, currentNoteIndex, isBarComplete, isGameCompl
   );
 };
 
-export default Bar2;
+export default Bar;
