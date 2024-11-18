@@ -1,9 +1,8 @@
 import React from 'react';
 import LifeIndicator from './LifeIndicator';
-import Bar from './Bar';  // Import the new unified Bar component
+import Bar from './Bar';
 
 const GameBoard = ({ barHearts, currentBarIndex, renderBar, isBarFailed, gamePhase }) => {  
-  // Update renderBar function to use bar number
   const renderBarComponent = (barNumber) => {
     return (
       <Bar 
@@ -17,6 +16,7 @@ const GameBoard = ({ barHearts, currentBarIndex, renderBar, isBarFailed, gamePha
         isBarFailing={isBarFailed}
         hasFailed={renderBar.failedBars[barNumber - 1]}
         gamePhase={gamePhase}
+        currentBarIndex={currentBarIndex}
       />
     );
   };
