@@ -1,18 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Bar.css';
 
 const Bar = ({ 
-  barNumber,  // New prop: 1-4
+  barNumber,
   isActive, 
   sequence, 
   currentNoteIndex, 
   isBarComplete, 
   isGameComplete, 
   hasFailed,
-  gamePhase   // Add this to help with visibility control
+  gamePhase
 }) => {
   const [flippedNotes, setFlippedNotes] = useState({});
   const [flipSound] = useState(new Audio('/assets/audio/ui-sounds/note-flip.mp3'));
+  const [isTouchTransition, setIsTouchTransition] = useState(false);
+
+  // Add useEffect to handle touch events
+  useEffect(() => {
+    if ('ontouchstart' in window) {
+      setIsTouchTransition(true);
+      const timer = setTimeout(() => {
+        setIsTouchTransition(false);
+      }, 100); // Brief delay
+      return () => clearTimeout(timer);
+    }
+  }, [gamePhase]); // Reset on gamePhase changes
 
   const crotchetPositions = [0, 70, 140, 210];
   const quaverOffsets = {
@@ -102,7 +114,7 @@ const Bar = ({
             onClick={() => handleNoteClick(index)}
             className={`note 
               ${(index < currentNoteIndex && !isBarComplete && gamePhase === 'perform' && !isTouchTransition) || 
-                isBarComplete || isGameComplete ? 'visible' : ''}
+                isBarComplete || isGameComplete ? 'visible' : ''} 
               ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
               ${flippedNotes[index] ? 'flipped' : ''}
               ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`
