@@ -6,6 +6,12 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
   const [showText, setShowText] = useState(false);
   const [typedText, setTypedText] = useState('');
   
+  // Add handleNextClick function
+  const handleNextClick = () => {
+    // Immediately trigger the next game
+    onNext();
+  };
+
   // Wrap getGameMessage in useCallback
   const getGameMessage = useCallback(() => {
     switch(currentGameNumber) {
@@ -33,6 +39,7 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
     return "getting there!";
   };
 
+  // Rest of your code remains the same...
   useEffect(() => {
     const message = getGameMessage();
     if (showText && typedText.length < message.length) {
@@ -96,7 +103,7 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
               src="/assets/images/ui/next.svg" 
               alt="Next" 
               className="next-button"
-              onClick={onNext}
+              onClick={handleNextClick}
               style={{ cursor: 'pointer' }}
             />
             <img 

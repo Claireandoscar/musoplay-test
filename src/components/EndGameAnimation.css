@@ -141,3 +141,12 @@
     height: 26px;
   }
 }
+
+.animation-content {
+  /* Keep your existing styles and add: */
+  transition: opacity 1s ease-out;
+}
+
+.animation-content.fade-out {
+  opacity: 0;
+}

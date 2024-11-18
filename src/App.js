@@ -19,6 +19,7 @@ function App() {
   const [barCompleteAudio, setBarCompleteAudio] = useState(null);
   const [barFailedAudio, setBarFailedAudio] = useState(null);
   const [audioContext, setAudioContext] = useState(null);
+  const [currentAudioSource, setCurrentAudioSource] = useState(null);
 
   // Game state and progress
   const [showStartScreen, setShowStartScreen] = useState(true);
@@ -275,46 +276,67 @@ useEffect(() => {
         setTimeout(() => {
             setShowEndAnimation(true);
             if (fullTuneAudio) {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createBufferSource();
-                source.buffer = fullTuneAudio;
-                source.connect(audioContext.destination);
-                source.start();
-            }
+              const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+              const source = audioContext.createBufferSource();
+              const gainNode = audioContext.createGain();
+              
+              source.buffer = fullTuneAudio;
+              source.connect(gainNode);
+              gainNode.connect(audioContext.destination);
+              source.start();
+              
+              // Store both source and gain node for later access
+              source.gainNode = gainNode;
+              setCurrentAudioSource(source);
+          }
         }, 2000);
     }
 }, [currentBarIndex, correctSequence.length, loadAudio, barCompleteAudio, fullTuneAudio]);
 
 const handleNextGame = () => {
   if (currentGameNumber < 3) {
-      setTimeout(() => {
-          setCurrentGameNumber(prev => prev + 1);
-          setIsGameComplete(false);
-          setShowEndAnimation(false);
-          setIsGameEnded(false);
-          
-          // Reset game states
-          setScore(0);
-          setBarHearts([4, 4, 4, 4]);
-          setCurrentBarIndex(0);
-          setCurrentNoteIndex(0);
-          setCompletedBars([false, false, false, false]);
-          
-          // Reset game phases and mode
-          setGameMode('initial');
-          setGamePhase('initial');
-          setFailedBars([false, false, false, false]);
-          
-          // Reset UI states - updated for new combined button
-          setIsListenPracticeMode(false);
+    // Fade out and stop any playing audio
+    if (currentAudioSource) {
+      try {
+        const gainNode = currentAudioSource.gainNode;
+        gainNode.gain.linearRampToValueAtTime(0, currentAudioSource.context.currentTime + 0.5);
+        
+        // Stop after fade
+        setTimeout(() => {
+          currentAudioSource.stop();
+          setCurrentAudioSource(null);
+        }, 500);
+      } catch (error) {
+        console.log('Error with audio fade:', error);
+      }
+    }
 
-          // Initialize audio
-          const ctx = initializeAudioContext();
-          ctx.resume();
-      }, 2000); // Keep the delay to allow the end animation to complete
-      
+    // Immediate state updates
+    setCurrentGameNumber(prev => prev + 1);
+    setIsGameComplete(false);
+    setShowEndAnimation(false);
+    setIsGameEnded(false);
+    
+    // Reset game states
+    setScore(0);
+    setBarHearts([4, 4, 4, 4]);
+    setCurrentBarIndex(0);
+    setCurrentNoteIndex(0);
+    setCompletedBars([false, false, false, false]);
+    
+    // Reset game phases and mode
+    setGameMode('initial');
+    setGamePhase('initial');
+    setFailedBars([false, false, false, false]);
+    
+    // Reset UI states
+    setIsListenPracticeMode(false);
+
+    // Initialize audio
+    const ctx = initializeAudioContext();
+    ctx.resume();
   } else {
-      console.log('All games completed - should redirect to survey');
+    console.log('All games completed - should redirect to survey');
   }
 };
 
