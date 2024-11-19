@@ -9,7 +9,8 @@ const Bar = ({
   isBarComplete, 
   isGameComplete, 
   hasFailed,
-  gamePhase
+  gamePhase,
+  isBarFailing
 }) => {
   const [flippedNotes, setFlippedNotes] = useState({});
   const [flipSound] = useState(new Audio('/assets/audio/ui-sounds/note-flip.mp3'));
@@ -101,8 +102,18 @@ const Bar = ({
             key={index}
             onClick={() => handleNoteClick(index)}
             className={`note 
-              ${(index < currentNoteIndex && !isBarComplete && gamePhase === 'perform') || 
-                isBarComplete || isGameComplete ? 'visible' : ''} 
+              ${(
+                // Only show notes during active play that haven't been reset
+                (index < currentNoteIndex && 
+                 !isBarComplete && 
+                 gamePhase === 'perform' && 
+                 !isBarFailing && 
+                 currentNoteIndex !== 0) ||  // Prevent showing notes when index is reset
+                // Show completed bars
+                (isBarComplete && !isBarFailing) || 
+                // Show all notes in completed game
+                isGameComplete
+              ) ? 'visible' : ''} 
               ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
               ${flippedNotes[index] ? 'flipped' : ''}
               ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`
