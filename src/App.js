@@ -426,10 +426,18 @@ const handleNotePlay = useCallback((noteNumber) => {
               setCurrentNoteIndex(newNoteIndex);
           }
       } else {
-          // Handle wrong note
+          // Handle wrong note with immediate state cleanup
           const handleWrongNote = async () => {
-              // Reset note index immediately
+              // Immediate state cleanup
               setCurrentNoteIndex(0);
+              setGamePhase('perform');
+              
+              // Force cleanup of any lingering states
+              setCompletedBars(prev => {
+                  const newBars = [...prev];
+                  newBars[currentBarIndex] = false;
+                  return newBars;
+              });
 
               // Play wrong note sound
               if (wrongNoteAudio) {
