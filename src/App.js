@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, startTransition } from 'react';
 import './App.css';
 import Toolbar from './components/Toolbar';
 import GameBoard from './components/GameBoard';
@@ -427,18 +427,18 @@ const handleNotePlay = useCallback((noteNumber) => {
           }
       } else {
           // Handle wrong note with immediate state cleanup
-          const handleWrongNote = async () => {
-              // Immediate state cleanup
-              setCurrentNoteIndex(0);
-              setGamePhase('perform');
-              
-              // Force cleanup of any lingering states
-              setCompletedBars(prev => {
-                  const newBars = [...prev];
-                  newBars[currentBarIndex] = false;
-                  return newBars;
+          const handleWrongNote = async () => {  // Added async here
+              startTransition(() => {
+                  // Group all related state updates
+                  setCurrentNoteIndex(0);
+                  setGamePhase('perform');
+                  setCompletedBars(prev => {
+                      const newBars = [...prev];
+                      newBars[currentBarIndex] = false;
+                      return newBars;
+                  });
               });
-
+              
               // Play wrong note sound
               if (wrongNoteAudio) {
                   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
