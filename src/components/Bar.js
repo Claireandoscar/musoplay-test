@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Bar.css';
 
 const Bar = ({ 
@@ -14,7 +14,9 @@ const Bar = ({
 }) => {
   const [flippedNotes, setFlippedNotes] = useState({});
   const [flipSound] = useState(new Audio('/assets/audio/ui-sounds/note-flip.mp3'));
+  const [visibleNotes, setVisibleNotes] = useState([]);
 
+  // Constants remain the same
   const crotchetPositions = [0, 70, 140, 210];
   const quaverOffsets = {
     left: 5,
@@ -32,6 +34,32 @@ const Bar = ({
     8: 'c8'
   };
 
+  // Separate effect to handle note visibility
+  useEffect(() => {
+    if (!sequence) return;
+    
+    const newVisibleNotes = sequence.map((_, index) => {
+      // Cases for note visibility
+      const isVisibleDuringPlay = (
+        gamePhase === 'perform' &&
+        index < currentNoteIndex &&
+        !isBarComplete &&
+        !isBarFailing &&
+        currentNoteIndex !== 0
+      );
+
+      const isVisibleWhenComplete = (
+        (isBarComplete && !isBarFailing) ||
+        isGameComplete
+      );
+
+      return isVisibleDuringPlay || isVisibleWhenComplete;
+    });
+
+    setVisibleNotes(newVisibleNotes);
+  }, [sequence, currentNoteIndex, isBarComplete, isGameComplete, gamePhase, isBarFailing]);
+
+  // Original helper functions remain the same
   const getNotePosition = (note, index, sequence) => {
     let beatIndex = 0;
     for (let i = 0; i < index; i++) {
@@ -76,6 +104,19 @@ const Bar = ({
     }
   };
 
+  // Debug log
+  useEffect(() => {
+    console.log('Bar rendering:', {
+      barNumber,
+      sequence: sequence?.length,
+      currentNoteIndex,
+      gamePhase,
+      isBarComplete,
+      isGameComplete,
+      isBarFailing
+    });
+  }, [barNumber, sequence, currentNoteIndex, gamePhase, isBarComplete, isGameComplete, isBarFailing]);
+
   return (
     <div className={`bar bar${barNumber} ${isActive ? 'active' : ''}`}>
       <div className="line"></div>
@@ -97,23 +138,12 @@ const Bar = ({
           </div>
         ))
       ) : (
-        sequence && sequence.map((note, index) => (
+        sequence?.map((note, index) => (
           <div
             key={index}
             onClick={() => handleNoteClick(index)}
             className={`note 
-              ${(
-                // Only show notes during active play that haven't been reset
-                (index < currentNoteIndex && 
-                 !isBarComplete && 
-                 gamePhase === 'perform' && 
-                 !isBarFailing && 
-                 currentNoteIndex !== 0) ||  // Prevent showing notes when index is reset
-                // Show completed bars
-                (isBarComplete && !isBarFailing) || 
-                // Show all notes in completed game
-                isGameComplete
-              ) ? 'visible' : ''} 
+              ${visibleNotes[index] ? 'visible' : ''} 
               ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
               ${flippedNotes[index] ? 'flipped' : ''}
               ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`

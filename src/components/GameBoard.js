@@ -2,29 +2,67 @@ import React from 'react';
 import LifeIndicator from './LifeIndicator';
 import Bar from './Bar';
 
-const GameBoard = ({ barHearts, currentBarIndex, renderBar, isBarFailed, gamePhase }) => {  
+const GameBoard = ({ 
+  barHearts, 
+  currentBarIndex, 
+  renderBar, 
+  isBarFailed, 
+  gamePhase 
+}) => {  
+  // Debug logging to track props
+  console.log('GameBoard Render:', {
+    currentBarIndex,
+    gamePhase,
+    correctSequence: renderBar?.correctSequence,
+    completedBars: renderBar?.completedBars,
+    currentNoteIndex: renderBar?.currentNoteIndex
+  });
+
   const renderBarComponent = (barNumber) => {
+    const barIndex = barNumber - 1;
+    const isCurrentBar = currentBarIndex === barIndex;
+    
+    // Debug logging for each bar
+    console.log(`Bar ${barNumber} rendering:`, {
+      sequence: renderBar?.correctSequence?.[barIndex],
+      currentNoteIndex: isCurrentBar ? renderBar?.currentNoteIndex : 0,
+      isComplete: renderBar?.completedBars?.[barIndex],
+      isFailing: isBarFailed && isCurrentBar
+    });
+
     return (
       <Bar 
         key={barNumber}
         barNumber={barNumber}
-        isActive={currentBarIndex === barNumber - 1}
-        sequence={renderBar.correctSequence[barNumber - 1] || []}
-        currentNoteIndex={currentBarIndex === barNumber - 1 ? renderBar.currentNoteIndex : 0}
-        isBarComplete={renderBar.completedBars[barNumber - 1]}
-        isGameComplete={renderBar.isGameComplete}
-        isBarFailing={isBarFailed}
-        hasFailed={renderBar.failedBars[barNumber - 1]}
+        isActive={isCurrentBar}
+        sequence={renderBar?.correctSequence?.[barIndex] || []}
+        currentNoteIndex={isCurrentBar ? renderBar?.currentNoteIndex : 0}
+        isBarComplete={renderBar?.completedBars?.[barIndex] || false}
+        isGameComplete={renderBar?.isGameComplete || false}
+        isBarFailing={isBarFailed && isCurrentBar}
+        hasFailed={renderBar?.failedBars?.[barIndex] || false}
         gamePhase={gamePhase}
-        currentBarIndex={currentBarIndex}
       />
     );
   };
 
+  // Early return if essential props are missing
+  if (!renderBar?.correctSequence) {
+    console.warn('GameBoard: Missing correct sequence data');
+    return (
+      <div className="bars-container">
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="lives-container">
-        <LifeIndicator hearts={barHearts[currentBarIndex]} isBarFailed={isBarFailed} />
+        <LifeIndicator 
+          hearts={barHearts[currentBarIndex] || 0} 
+          isBarFailed={isBarFailed} 
+        />
       </div>
       <div className="bars-container">
         {[1, 2, 3, 4].map(barNumber => renderBarComponent(barNumber))}
