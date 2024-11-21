@@ -596,12 +596,12 @@ const handleNotePlay = useCallback((noteNumber) => {
      
         // Play wrong note sound
         if (wrongNoteAudio) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createBufferSource();
-            source.buffer = wrongNoteAudio;
-            source.connect(audioContext.destination);
-            source.start();
-        }
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createBufferSource();
+          source.buffer = wrongNoteAudio;
+          source.connect(audioContext.destination);
+          source.start();
+      }
      
         // Check if bar failed
         if (gameState.barHearts[currentBarIndex] <= 1) {
