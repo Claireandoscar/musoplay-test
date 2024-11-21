@@ -68,6 +68,16 @@ function gameReducer(state, action) {
                 ...state,
                 isBarFailing: action.failing
             };
+
+        case 'RESET_GAME_STATE':
+              return {
+                  ...initialGameState,
+                  currentNoteIndex: 0,
+                  gamePhase: 'initial',
+                  completedBars: [false, false, false, false],
+                  isBarFailing: false,
+                  barHearts: [4, 4, 4, 4]
+              };   
             
         default:
             return state;
@@ -257,6 +267,37 @@ useEffect(() => {
         dispatch({ type: 'RESET_COMPLETED_BARS' });
     }
 }, [audioFiles, dispatch]);
+
+useEffect(() => {
+    const cleanupAudio = () => {
+      if (currentAudioSource) {
+        try {
+          currentAudioSource.stop();
+          currentAudioSource.disconnect();
+        } catch (error) {
+          console.log('Error cleaning up audio source:', error);
+        }
+      }
+      setWrongNoteAudio(null);
+      setBarCompleteAudio(null);
+      setBarFailedAudio(null);
+    };
+    return cleanupAudio;
+  }, [currentAudioSource]); 
+
+  useEffect(() => {
+    const cleanup = () => {
+      if (window.gc) {
+        window.gc();
+      }
+    };
+    document.addEventListener('visibilitychange', cleanup);
+    return () => {
+      document.removeEventListener('visibilitychange', cleanup);
+      cleanup();
+    };
+  }, []);
+
   useEffect(() => {
     const loadAudio = async (audioPath, setAudioState) => {
       try {
@@ -323,81 +364,85 @@ useEffect(() => {
         setFailedBars([false, false, false, false]);
     });
 };
-  
+
+
 const moveToNextBar = useCallback((isSuccess = true) => {
-    // Function to handle end of game
-    const handleGameEnd = async () => {
-        setIsGameComplete(true);
-        setIsGameEnded(true);
-        setGameMode('ended');
-        setIsListenPracticeMode(false);
-        dispatch({ type: 'SET_GAME_PHASE', payload: 'ended' });
+  // Clear previous bar data
+  setCurrentBarAudio(null);
+  
+  // Function to handle end of game
+  const handleGameEnd = async () => {
+      setIsGameComplete(true);
+      setIsGameEnded(true);
+      setGameMode('ended');
+      setIsListenPracticeMode(false);
+      dispatch({ type: 'SET_GAME_PHASE', payload: 'ended' });
 
-        // Wait for state updates before showing animation
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        setShowEndAnimation(true);
-        if (fullTuneAudio) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createBufferSource();
-            const gainNode = audioContext.createGain();
-            
-            source.buffer = fullTuneAudio;
-            source.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            source.start();
-            
-            source.gainNode = gainNode;
-            setCurrentAudioSource(source);
-        }
-    };
+      // Wait for state updates before showing animation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setShowEndAnimation(true);
+      if (fullTuneAudio) {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createBufferSource();
+          const gainNode = audioContext.createGain();
+          
+          source.buffer = fullTuneAudio;
+          source.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          source.start();
+          
+          source.gainNode = gainNode;
+          setCurrentAudioSource(source);
+      }
+  };
 
-    // Function to handle moving to next bar
-    const handleNextBar = async () => {
-        // Update completed bars
-        dispatch({ 
-            type: 'UPDATE_COMPLETED_BARS', 
-            barIndex: currentBarIndex,
-            completed: true
-        });
+  // Function to handle moving to next bar
+  const handleNextBar = async () => {
+      // Update completed bars
+      dispatch({ 
+          type: 'UPDATE_COMPLETED_BARS', 
+          barIndex: currentBarIndex,
+          completed: true
+      });
 
-        // Play completion sound if successful
-        if (barCompleteAudio && isSuccess) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createBufferSource();
-            source.buffer = barCompleteAudio;
-            source.connect(audioContext.destination);
-            source.start();
-        }
+      // Play completion sound if successful
+      if (barCompleteAudio && isSuccess) {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const source = audioContext.createBufferSource();
+          source.buffer = barCompleteAudio;
+          source.connect(audioContext.destination);
+          source.start();
+      }
 
-        // Reset states for next bar
-        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-        dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
-        setGameMode('initial');
-        setIsListenPracticeMode(false);
-        
-        // Load audio for next bar
-        await loadAudio(currentBarIndex + 1);
+      // Reset states for next bar
+      dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+      dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
+      setGameMode('initial');
+      setIsListenPracticeMode(false);
+      
+      // Load audio for next bar
+      await loadAudio(currentBarIndex + 1);
 
-        // Finally update the bar index
-        setCurrentBarIndex(prev => prev + 1);
-    };
+      // Finally update the bar index
+      setCurrentBarIndex(prev => prev + 1);
+  };
 
-    // Main logic
-    const nextBarIndex = currentBarIndex + 1;
-    if (nextBarIndex < correctSequence.length) {
-        handleNextBar();
-    } else {
-        handleGameEnd();
-    }
+  // Main logic
+  const nextBarIndex = currentBarIndex + 1;
+  if (nextBarIndex < correctSequence.length) {
+      handleNextBar();
+  } else {
+      handleGameEnd();
+  }
 }, [
-    currentBarIndex, 
-    correctSequence.length, 
-    loadAudio, 
-    barCompleteAudio, 
-    fullTuneAudio,
-    setCurrentAudioSource,
-    dispatch
+  currentBarIndex, 
+  correctSequence.length, 
+  loadAudio, 
+  barCompleteAudio, 
+  fullTuneAudio,
+  setCurrentAudioSource,
+  dispatch
 ]);
   // Function to handle audio fade out
   const handleNextGame = () => {
@@ -406,6 +451,28 @@ const moveToNextBar = useCallback((isSuccess = true) => {
         return;
     }
 
+    // Clear existing audio
+    if (currentAudioSource) {
+        try {
+            currentAudioSource.stop();
+            currentAudioSource.disconnect();
+            setCurrentAudioSource(null);
+        } catch (error) {
+            console.log('Error cleaning up audio source:', error);
+        }
+    }
+
+    // Reset all state
+    setAudioFiles([]);
+    setFullTuneAudio(null);
+    setCurrentBarAudio(null);
+    setScore(0);
+    setCurrentBarIndex(0);
+    setFailedBars([false, false, false, false]);
+    
+    // Reset reducer state
+    dispatch({ type: 'RESET_GAME_STATE' });
+    
     // Function to handle audio fade out
     const fadeOutAudio = async () => {
         if (currentAudioSource) {

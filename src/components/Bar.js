@@ -14,9 +14,33 @@ const Bar = ({
 }) => {
   const [flippedNotes, setFlippedNotes] = useState({});
   const [flipSound] = useState(new Audio('/assets/audio/ui-sounds/note-flip.mp3'));
-  const [visibleNotes, setVisibleNotes] = useState([]);
 
-  // Constants remain the same
+  // Clean up flip sound and reset flipped notes when component unmounts
+  useEffect(() => {
+    return () => {
+      if (flipSound) {
+        flipSound.pause();
+        flipSound.currentTime = 0;
+      }
+    };
+  }, [flipSound]);
+
+  // Reset flipped notes when bar completes or game completes
+  useEffect(() => {
+    setFlippedNotes({});
+  }, [isBarComplete, isGameComplete]);
+
+  // Add debug logging for state changes
+  useEffect(() => {
+    console.log(`Bar ${barNumber} state update:`, {
+      isActive,
+      currentNoteIndex,
+      isBarComplete,
+      gamePhase,
+      isBarFailing
+    });
+  }, [barNumber, isActive, currentNoteIndex, isBarComplete, gamePhase, isBarFailing]);
+
   const crotchetPositions = [0, 70, 140, 210];
   const quaverOffsets = {
     left: 5,
@@ -34,32 +58,6 @@ const Bar = ({
     8: 'c8'
   };
 
-  // Separate effect to handle note visibility
-  useEffect(() => {
-    if (!sequence) return;
-    
-    const newVisibleNotes = sequence.map((_, index) => {
-      // Cases for note visibility
-      const isVisibleDuringPlay = (
-        gamePhase === 'perform' &&
-        index < currentNoteIndex &&
-        !isBarComplete &&
-        !isBarFailing &&
-        currentNoteIndex !== 0
-      );
-
-      const isVisibleWhenComplete = (
-        (isBarComplete && !isBarFailing) ||
-        isGameComplete
-      );
-
-      return isVisibleDuringPlay || isVisibleWhenComplete;
-    });
-
-    setVisibleNotes(newVisibleNotes);
-  }, [sequence, currentNoteIndex, isBarComplete, isGameComplete, gamePhase, isBarFailing]);
-
-  // Original helper functions remain the same
   const getNotePosition = (note, index, sequence) => {
     let beatIndex = 0;
     for (let i = 0; i < index; i++) {
@@ -104,18 +102,17 @@ const Bar = ({
     }
   };
 
-  // Debug log
-  useEffect(() => {
-    console.log('Bar rendering:', {
-      barNumber,
-      sequence: sequence?.length,
-      currentNoteIndex,
-      gamePhase,
-      isBarComplete,
-      isGameComplete,
-      isBarFailing
-    });
-  }, [barNumber, sequence, currentNoteIndex, gamePhase, isBarComplete, isGameComplete, isBarFailing]);
+  // Calculate note visibility once to avoid recalculations
+  const getNoteVisibility = (index) => {
+    return (
+      (index < currentNoteIndex && 
+       !isBarComplete && 
+       gamePhase === 'perform' && 
+       !isBarFailing) ||
+      (isBarComplete && !isBarFailing) || 
+      isGameComplete
+    ) ? 'visible' : '';
+  };
 
   return (
     <div className={`bar bar${barNumber} ${isActive ? 'active' : ''}`}>
@@ -143,7 +140,7 @@ const Bar = ({
             key={index}
             onClick={() => handleNoteClick(index)}
             className={`note 
-              ${visibleNotes[index] ? 'visible' : ''} 
+              ${getNoteVisibility(index)} 
               ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
               ${flippedNotes[index] ? 'flipped' : ''}
               ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`
