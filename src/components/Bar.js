@@ -14,32 +14,7 @@ const Bar = ({
 }) => {
   const [flippedNotes, setFlippedNotes] = useState({});
   const [flipSound] = useState(new Audio('/assets/audio/ui-sounds/note-flip.mp3'));
-
-  // Clean up flip sound and reset flipped notes when component unmounts
-  useEffect(() => {
-    return () => {
-      if (flipSound) {
-        flipSound.pause();
-        flipSound.currentTime = 0;
-      }
-    };
-  }, [flipSound]);
-
-  // Reset flipped notes when bar completes or game completes
-  useEffect(() => {
-    setFlippedNotes({});
-  }, [isBarComplete, isGameComplete]);
-
-  // Add debug logging for state changes
-  useEffect(() => {
-    console.log(`Bar ${barNumber} state update:`, {
-      isActive,
-      currentNoteIndex,
-      isBarComplete,
-      gamePhase,
-      isBarFailing
-    });
-  }, [barNumber, isActive, currentNoteIndex, isBarComplete, gamePhase, isBarFailing]);
+  const [visibleNotes, setVisibleNotes] = useState({});
 
   const crotchetPositions = [0, 70, 140, 210];
   const quaverOffsets = {
@@ -102,16 +77,43 @@ const Bar = ({
     }
   };
 
-  // Calculate note visibility once to avoid recalculations
+  // Cleanup effects
+  useEffect(() => {
+    return () => {
+      if (flipSound) {
+        flipSound.pause();
+        flipSound.currentTime = 0;
+      }
+    };
+  }, [flipSound]);
+
+  useEffect(() => {
+    setFlippedNotes({});
+  }, [isBarComplete, isGameComplete]);
+
+  // Visibility effects
+  useEffect(() => {
+    if (isBarFailing || gamePhase !== 'perform') {
+      setVisibleNotes({});
+    }
+  }, [isBarFailing, gamePhase]);
+
+  useEffect(() => {
+    if (gamePhase === 'perform' && !isBarFailing && !isBarComplete) {
+      const newVisibleNotes = {};
+      for (let i = 0; i < currentNoteIndex; i++) {
+        newVisibleNotes[i] = true;
+      }
+      setVisibleNotes(newVisibleNotes);
+    }
+  }, [currentNoteIndex, gamePhase, isBarFailing, isBarComplete]);
+
   const getNoteVisibility = (index) => {
-    return (
-      (index < currentNoteIndex && 
-       !isBarComplete && 
-       gamePhase === 'perform' && 
-       !isBarFailing) ||
-      (isBarComplete && !isBarFailing) || 
-      isGameComplete
-    ) ? 'visible' : '';
+    if (isBarComplete && !isBarFailing) return 'visible';
+    if (isGameComplete) return 'visible';
+    if (gamePhase !== 'perform') return '';
+    if (isBarFailing) return '';
+    return visibleNotes[index] ? 'visible' : '';
   };
 
   return (

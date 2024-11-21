@@ -376,6 +376,11 @@ const moveToNextBar = useCallback((isSuccess = true) => {
       setIsGameEnded(true);
       setGameMode('ended');
       setIsListenPracticeMode(false);
+      dispatch({ 
+          type: 'UPDATE_COMPLETED_BARS', 
+          barIndex: currentBarIndex,
+          completed: true
+      });
       dispatch({ type: 'SET_GAME_PHASE', payload: 'ended' });
 
       // Wait for state updates before showing animation
@@ -438,12 +443,12 @@ const moveToNextBar = useCallback((isSuccess = true) => {
 }, [
   currentBarIndex, 
   correctSequence.length, 
-  loadAudio, 
-  barCompleteAudio, 
   fullTuneAudio,
   setCurrentAudioSource,
-  dispatch
-]);
+  dispatch,
+  barCompleteAudio,   // Added back, needs a comma here
+  loadAudio           // Added back as last item
+]);                     // Close the array and callback
   // Function to handle audio fade out
   const handleNextGame = () => {
     if (currentGameNumber >= 3) {
@@ -529,187 +534,198 @@ const moveToNextBar = useCallback((isSuccess = true) => {
 };
 
 const handleNotePlay = useCallback((noteNumber) => {
-    console.log('Note play start state:', {
-      noteNumber,
-      gamePhase: gameState.gamePhase,
-      currentBarIndex,
-      currentNoteIndex: gameState.currentNoteIndex,
-      currentSequence: correctSequence[currentBarIndex],
+  console.log('Note play start state:', {
+    noteNumber,
+    gamePhase: gameState.gamePhase,
+    currentBarIndex,
+    currentNoteIndex: gameState.currentNoteIndex,
+    currentSequence: correctSequence[currentBarIndex],
+  });
+
+  if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
+    return;
+  }
+
+  // Play note sound
+  const audio = new Audio(`/assets/audio/n${noteNumber}.mp3`);
+  audio.play().catch(error => console.error("Audio playback failed:", error));
+
+  if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
+    const currentSequence = correctSequence[currentBarIndex];
+    const currentNote = currentSequence[gameState.currentNoteIndex];
+    
+    console.log('Checking note:', {
+      played: noteNumber,
+      expected: currentNote?.number,
+      noteIndex: gameState.currentNoteIndex,
+      sequence: currentSequence
     });
-  
-    if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
-      return;
-    }
-  
-    // Play note sound
-    const audio = new Audio(`/assets/audio/n${noteNumber}.mp3`);
-    audio.play().catch(error => console.error("Audio playback failed:", error));
-  
-    if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
-      const currentSequence = correctSequence[currentBarIndex];
-      const currentNote = currentSequence[gameState.currentNoteIndex];
+
+    const isCorrectNote = noteNumber === currentNote.number;
+
+    if (isCorrectNote) {
+      const newNoteIndex = gameState.currentNoteIndex + 1;
+      console.log('Correct note, updating index:', newNoteIndex);
       
-      console.log('Checking note:', {
-        played: noteNumber,
-        expected: currentNote?.number,
-        noteIndex: gameState.currentNoteIndex,
-        sequence: currentSequence
-      });
-  
-      const isCorrectNote = noteNumber === currentNote.number;
-  
-      if (isCorrectNote) {
-        const newNoteIndex = gameState.currentNoteIndex + 1;
-        console.log('Correct note, updating index:', newNoteIndex);
+      dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
+
+      if (newNoteIndex === currentSequence.length) {
+        const updatedScore = gameState.barHearts[currentBarIndex];
+        setScore(prevScore => prevScore + updatedScore);
+        moveToNextBar(true);
+      }
+    } else {
+      // Handle wrong note with immediate state cleanup
+      const handleWrongNote = async () => {
+        console.log('Wrong note played - clearing notes');
         
-        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
-  
-        if (newNoteIndex === currentSequence.length) {
-          const updatedScore = gameState.barHearts[currentBarIndex];
-          setScore(prevScore => prevScore + updatedScore);
-          moveToNextBar(true);
-        }
-      } else {
-        // Handle wrong note with audio feedback
-        const handleWrongNote = async () => {
-          dispatch({ 
+        // First, set bar failing state
+        dispatch({ 
+            type: 'SET_BAR_FAILING',
+            failing: true
+        });
+     
+        // Immediately reset note index to clear visible notes
+        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+     
+        // Then update hearts
+        dispatch({ 
             type: 'WRONG_NOTE',
             barIndex: currentBarIndex
-          });
-  
-          // Play wrong note sound
-          if (wrongNoteAudio) {
+        });
+     
+        // Play wrong note sound
+        if (wrongNoteAudio) {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createBufferSource();
             source.buffer = wrongNoteAudio;
             source.connect(audioContext.destination);
             source.start();
-          }
-  
-          // Check if bar failed
-          if (gameState.barHearts[currentBarIndex] <= 1) { // Check if this will be the last heart
-            dispatch({ 
-              type: 'SET_BAR_FAILING',
-              failing: true
-            });
-  
+        }
+     
+        // Check if bar failed
+        if (gameState.barHearts[currentBarIndex] <= 1) {
             // Play bar failed sound after a short delay
             setTimeout(() => {
-              if (barFailedAudio) {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createBufferSource();
-                source.buffer = barFailedAudio;
-                source.connect(audioContext.destination);
-                source.start();
-              }
+                if (barFailedAudio) {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioContext.createBufferSource();
+                    source.buffer = barFailedAudio;
+                    source.connect(audioContext.destination);
+                    source.start();
+                }
             }, 300);
-  
+     
             // Move to next bar after failure animation
             setTimeout(() => {
-              dispatch({ 
-                type: 'SET_BAR_FAILING',
-                failing: false
-              });
-              moveToNextBar(false);
+                dispatch({ 
+                    type: 'SET_BAR_FAILING',
+                    failing: false
+                });
+                moveToNextBar(false);
             }, 1500);
-          }
-        };
-  
-        handleWrongNote();
-      }
-    }
-  }, [
-    gameState,
-    correctSequence,
-    currentBarIndex,
-    dispatch,
-    moveToNextBar,
-    wrongNoteAudio,
-    barFailedAudio
-  ]);
+        } else {
+            // Reset bar failing state if bar hasn't failed completely
+            setTimeout(() => {
+                dispatch({ 
+                    type: 'SET_BAR_FAILING',
+                    failing: false
+                });
+            }, 500);
+        }
+     };
 
-if (showStartScreen) {
-  return (
-      <div className="game-wrapper">
-          <div className="game-container">
-              <StartScreen onStartGame={handleStartGame} />
-          </div>
-      </div>
-  );
-}
+      handleWrongNote();
+    }
+  }
+}, [
+gameState,
+correctSequence,
+currentBarIndex,
+dispatch,
+moveToNextBar,
+wrongNoteAudio,
+barFailedAudio
+]);
 
 return (
   <div className="game-wrapper">
-      <div className={`game-container ${gameMode}`}>
-          <Toolbar onShowInstructions={() => {
-              console.log('Setting showInstructions to true');
-              setShowInstructions(true);
-          }} />
-          <GameBoard 
-              barHearts={gameState.barHearts} 
-              currentBarIndex={currentBarIndex}
-              renderBar={{
-                  correctSequence,
-                  currentNoteIndex: gameState.currentNoteIndex,
-                  completedBars: gameState.completedBars,
-                  isGameComplete,
-                  failedBars
-              }}
-              isBarFailed={gameState.isBarFailing}
-              gamePhase={gameState.gamePhase}
-          />
-          <Controls 
-              onListenPractice={handleListenPractice}
-              onPerform={handlePerform}
-              isListenPracticeMode={isListenPracticeMode}
-              isPerformAvailable={true}
-              isAudioLoaded={!!currentBarAudio}
-              gamePhase={gameState.gamePhase}
-          />
-          <VirtualInstrument 
-              notes={notes}
-              onNotePlay={handleNotePlay}
-              isGameEnded={isGameEnded}
-              isBarFailing={gameState.isBarFailing}
-          />
-          <ProgressBar completedBars={gameState.completedBars.filter(Boolean).length} />
-          {showEndAnimation && (
-              <EndGameAnimation 
-                  score={score} 
+      {showStartScreen ? (
+          <div className="game-container">
+              <StartScreen onStartGame={handleStartGame} />
+          </div>
+      ) : (
+          <div className={`game-container ${gameMode}`}>
+              <Toolbar onShowInstructions={() => {
+                  console.log('Setting showInstructions to true');
+                  setShowInstructions(true);
+              }} />
+              <GameBoard 
                   barHearts={gameState.barHearts} 
-                  onNext={handleNextGame}
-                  currentGameNumber={currentGameNumber}
+                  currentBarIndex={currentBarIndex}
+                  renderBar={{
+                      correctSequence,
+                      currentNoteIndex: gameState.currentNoteIndex,
+                      completedBars: gameState.completedBars,
+                      isGameComplete,
+                      failedBars
+                  }}
+                  isBarFailed={gameState.isBarFailing}
+                  gamePhase={gameState.gamePhase}
               />
-          )}
-          {showInstructions && (
-              <div className="instructions-popup">
-                  <button className="close-button" onClick={() => setShowInstructions(false)}>
-                      ×
-                  </button>
-                  <div className="instructions-content">
-                      <h2>HOW TO PLAY</h2>
-                      <div className="instruction-flow">
-                          <p>
-                              Press <img 
-                                  src="/assets/images/ui/listen-practice.svg" 
-                                  alt="Listen & Practice" 
-                                  className="inline-button large"
-                              /> to hear the melody, try to find the right notes using the virtual instrument, then when you're ready press <img 
-                                  src="/assets/images/ui/perform.svg" 
-                                  alt="Perform" 
-                                  className="inline-button small"
-                              /> to play the melody for real, but be careful you could lose a <img 
-                                  src="/assets/images/ui/heart.svg" 
-                                  alt="Heart" 
-                                  className="inline-icon"
-                              /> if you make a mistake!
-                          </p>
+              <Controls 
+                  onListenPractice={handleListenPractice}
+                  onPerform={handlePerform}
+                  isListenPracticeMode={isListenPracticeMode}
+                  isPerformAvailable={true}
+                  isAudioLoaded={!!currentBarAudio}
+                  gamePhase={gameState.gamePhase}
+              />
+              <VirtualInstrument 
+                  notes={notes}
+                  onNotePlay={handleNotePlay}
+                  isGameEnded={isGameEnded}
+                  isBarFailing={gameState.isBarFailing}
+              />
+              <ProgressBar completedBars={gameState.completedBars.filter(Boolean).length} />
+              {showEndAnimation && (
+                  <EndGameAnimation 
+                      score={score} 
+                      barHearts={gameState.barHearts} 
+                      onNext={handleNextGame}
+                      currentGameNumber={currentGameNumber}
+                  />
+              )}
+              {showInstructions && (
+                  <div className="instructions-popup">
+                      <button className="close-button" onClick={() => setShowInstructions(false)}>
+                          ×
+                      </button>
+                      <div className="instructions-content">
+                          <h2>HOW TO PLAY</h2>
+                          <div className="instruction-flow">
+                              <p>
+                                  Press <img 
+                                      src="/assets/images/ui/listen-practice.svg" 
+                                      alt="Listen & Practice" 
+                                      className="inline-button large"
+                                  /> to hear the melody, try to find the right notes using the virtual instrument, then when you're ready press <img 
+                                      src="/assets/images/ui/perform.svg" 
+                                      alt="Perform" 
+                                      className="inline-button small"
+                                  /> to play the melody for real, but be careful you could lose a <img 
+                                      src="/assets/images/ui/heart.svg" 
+                                      alt="Heart" 
+                                      className="inline-icon"
+                                  /> if you make a mistake!
+                              </p>
+                          </div>
+                          <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
                       </div>
-                      <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
                   </div>
-              </div>
-          )}
-      </div>
+              )}
+          </div>
+      )}
   </div>
 );
 }
