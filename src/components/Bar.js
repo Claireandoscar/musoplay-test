@@ -62,8 +62,16 @@ const Bar = ({
         `/assets/images/bar-notes/quavers/n${note.fullNote}.svg` :
         `/assets/images/bar-notes/crochets/n${note.number}.svg`;
     
+    console.log('Note path:', {
+        isFlipped,
+        isQuaver: note.isQuaverLeft || note.isQuaverRight,
+        noteNumber: note.number,
+        noteName: noteNameMap[note.number],
+        path
+    });
+    
     return path;
-  };
+};
 
   const handleNoteClick = (index) => {
     if (isBarComplete || isGameComplete) {
@@ -152,19 +160,21 @@ const Bar = ({
               width: note.isQuaverLeft || note.isQuaverRight ? '27.6px' : '60px'
             }}
           >
-            <div className="note-front">
-              <img 
-                src={getNoteImagePath(note, false)}
-                alt={`Note ${note.fullNote || note.number}`}
-                className="note-image"
-              />
-            </div>
-            <div className="note-back">
-              <img 
-                src={getNoteImagePath(note, true)}
-                alt={`Note name ${noteNameMap[note.number]}`}
-                className="note-image"
-              />
+            <div className="note-container">
+              <div className="note-front">
+                <img 
+                  src={getNoteImagePath(note, false)}
+                  alt={`Note ${note.fullNote || note.number}`}
+                  className="note-image"
+                />
+              </div>
+              <div className="note-back">
+                <img 
+                  src={getNoteImagePath(note, true)}
+                  alt={`Note name ${noteNameMap[note.number]}`}
+                  className="note-image"
+                />
+              </div>
             </div>
           </div>
         ))
