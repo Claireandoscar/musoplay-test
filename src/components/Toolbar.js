@@ -1,26 +1,31 @@
+// Toolbar.js
 import React from 'react';
 import './Toolbar.css';
 
 const Toolbar = ({ onShowInstructions }) => {
   const handleClick = () => {
-    console.log('Help button clicked');  // Debug log
+    console.log('Help button clicked');
     onShowInstructions();
   };
 
   return (
     <div className="toolbar">
-      <button 
-        className="help-button" 
-        onClick={handleClick}
-        aria-label="Show instructions"
-      >
-        ?
-      </button>
       <img 
         src="/assets/images/ui/logo.svg" 
         alt="Musoplay Logo" 
         className="toolbar-logo"
       />
+      <button 
+        onClick={handleClick}
+        className="how-to-play-button"
+        aria-label="Show instructions"
+      >
+        <img 
+          src="/assets/images/ui/how-to-play.svg" 
+          alt="How To Play" 
+          className="how-to-play-icon"
+        />
+      </button>
     </div>
   );
 };

@@ -27,17 +27,16 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
   }, [currentGameNumber]);
 
   const getScoringPhrase = (score) => {
-    if (score === 16) return "pitch perfect";
-    if (score === 15) return "musical genius";
-    if (score === 14) return "melody master";
-    if (score === 13) return "note ninja";
-    if (score === 12) return "harmony hero";
-    if (score === 11) return "tune titan";
-    if (score === 10) return "melody maker";
-    if (score === 9) return "note navigator";
-    if (score === 8) return "pitch pioneer";
-    return "getting there!";
-  };
+    if (score === 16) return "Legendary";
+    if (score === 15) return "Outstanding";
+    if (score === 14) return "Brilliant";
+    if (score === 13) return "Impressive";
+    if (score === 12) return "Fantastic";
+    if (score === 11) return "Well Done";
+    if (score === 10) return "Great Job";
+    if (score === 9) return "Nice Work";
+    if (score === 8) return "Good Try";
+};
 
   // Rest of your code remains the same...
   useEffect(() => {
