@@ -101,7 +101,7 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
             <img 
               src="/assets/images/ui/next.svg" 
               alt="Next" 
-              className="next-button"
+              className="end-animation-next-button"
               onClick={handleNextClick}
               style={{ cursor: 'pointer' }}
             />

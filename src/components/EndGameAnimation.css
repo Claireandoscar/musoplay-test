@@ -69,17 +69,17 @@
   margin: 0 6px;
 }
 
-.next-button {
+.end-animation-next-button {
   width: 80px;
   height: 80px;
   margin-top: 20px;
   cursor: pointer;
   transition: transform 0.3s ease;
   position: absolute;
-  bottom: 140px; /* Position above the typed message */
+  bottom: 140px;
 }
 
-.next-button:hover {
+.end-animation-next-button:hover {
   transform: scale(1.1);
 }
 
@@ -125,11 +125,12 @@
     margin: 5px 0;
   }
 
-  .next-button {
+  .end-animation-next-button {
     width: 60px;
     height: 60px;
     bottom: 120px;
   }
+}
 
   .typed-message {
     bottom: 60px;
@@ -140,7 +141,6 @@
     width: 120px;
     height: 26px;
   }
-}
 
 .animation-content {
   /* Keep your existing styles and add: */
