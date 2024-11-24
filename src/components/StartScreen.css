@@ -25,28 +25,64 @@
   font-size: 18px;
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.start-button {
+/* Central button container */
+/* Update the central button container styles */
+.central-button-container {
   position: absolute;
   width: 200px;
   height: 200px;
   left: 95px;
+  top: 210px; /* This will position both buttons */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Central button container - for rectangle start button */
+.central-button-container {
+  position: absolute;
+  width: 200px;
+  height: 250px;  /* Make taller for rectangle shape */
+  left: 95px;
   top: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Start button as a rectangle */
+.start-button {
+  width: 200px;
+  height: 250px;  /* Taller for rectangle shape */
   background: none;
   border: none;
+  outline: none;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-bottom: 10px;
-  transition: transform 0.1s;
-  animation: pulse 2s infinite;
+  transition: all 0.3s ease;
+}
+
+.start-button img {
+  width: 100%;
+  height: auto;  /* Let image maintain aspect ratio */
+  object-fit: contain;
+}
+
+.start-button span {
+  position: absolute;
+  bottom: -20px;  /* Adjusted to work with rectangle shape */
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 22px;
+  line-height: 1.2;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+.start-button.active {
+  animation: popIn 0.5s ease-out, pulse 2s infinite;
 }
 
 .start-button:hover {
@@ -71,26 +107,77 @@
   width: 100%;
   text-align: center;
   font-size: 22px;
-  line-height: 1.2; 
+  line-height: 1.2;
   font-family: 'patrick-hand-sc', sans-serif;
+}
+/* Central button container - only one definition */
+.central-button-container {
+  position: absolute;
+  width: 200px;
+  height: 250px;  /* Rectangle shape for start button */
+  left: 95px;
+  top: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Next button - single definition with exact positioning */
+.next-button {
+  position: absolute;
+  width: 210px;
+  height: 110px;
+  left: 90px;
+  top: 500px;
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  animation: pulse 2s infinite;
+}
+
+.next-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.next-button:hover {
+  animation: none;
+  transform: scale(1.1);
+}
+
+.next-button:active {
+  transform: scale(0.95);
 }
 
 .testing-info {
   position: absolute;
-  top: 500px;
+  top: 205px;
   left: 45px;
   width: 300px;
   text-align: center;
   font-family: 'patrick-hand-sc', sans-serif;
-  font-size: 20px;
+  font-size: 28px;
   line-height: 1.4;
+  perspective: 1000px;
 }
 
 .testing-info p {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  transition: transform 0.5s ease-in-out;
+  animation: slideInFromLeft 0.5s ease-out;
 }
 
-/* Updated Instructions Popup Styles */
+.testing-info.flipping p {
+  animation: slideOutToRight 0.5s ease-in;
+}
+
+/* Instructions popup styles */
 .instructions-popup {
   position: absolute;
   top: 50%;
@@ -133,7 +220,6 @@
   font-family: 'patrick-hand-sc', sans-serif;
 }
 
-/* New instruction flow styles */
 .instruction-flow {
   padding: 0 10px;
   margin-bottom: 30px;
@@ -147,7 +233,6 @@
   font-family: 'patrick-hand-sc', sans-serif;
 }
 
-/* Inline button and icon styles */
 .inline-button {
   vertical-align: middle;
   display: inline-block;
@@ -177,4 +262,58 @@
   font-weight: bold;
   margin-top: 20px;
   font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.enjoy-text {
+  position: absolute;
+  top: 500px;  /* Same position where next button was */
+  width: 100%;
+  text-align: center;
+  font-size: 28px;
+  font-family: 'patrick-hand-sc', sans-serif;
+  color: black;
+  animation: popIn 0.5s ease-out;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }

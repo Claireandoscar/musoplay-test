@@ -1,8 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react';  // Add this at the top
 import './StartScreen.css';
 
+
 const StartScreen = ({ onStartGame }) => {
+  const [currentBlock, setCurrentBlock] = useState(0);
+  const [isFlipping, setIsFlipping] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showStartButton, setShowStartButton] = useState(false);
+  
+  const infoBlocks = [
+    "WELCOME TO MUSOPLAY TESTING!",
+    "YOUR FEEDBACK WILL SHAPE THIS GAME - THANK YOU FOR HELPING!",
+    "THE FUTURE MUSOPLAY WILL OFFER A NEW MELODY EVERY 24 HOURS",
+    "TODAY'S TEST VERSION HAS THREE MELODIES AT DIFFERENT DIFFICULTY LEVELS",
+    "YOUR PREFERENCES WILL GUIDE HOW FUTURE MELODIES AND OTHER ELEMENTS OF THE GAME ARE CRAFTED",
+    "PLEASE SHARE YOUR THOUGHTS IN A QUICK SURVEY AFTER"
+ ];
+
+  const handleNext = () => {
+    setIsFlipping(true);
+    setTimeout(() => {
+      if (currentBlock === infoBlocks.length - 1) {
+        setShowStartButton(true);
+      } else {
+        setCurrentBlock(prev => prev + 1);
+      }
+      setIsFlipping(false);
+    }, 500);
+  };
 
   const handleStartClick = () => {
     setShowInstructions(true);
@@ -21,15 +46,28 @@ const StartScreen = ({ onStartGame }) => {
         className="logo"
       />
       <div className="tagline">THE DAILY MUSIC GAME</div>
-      <button className="start-button" onClick={handleStartClick}>
-        <img src="/assets/images/ui/n7.svg" alt="Start Game" />
-        <span>START</span>
-      </button>
       
-      <div className="testing-info">
-        <p>You're invited to participate in the testing of Musoplay. Your feedback will help improve the experience for future Musoplayers.</p>
-        <p>After 3 short games you'll be asked to complete a short survey about your experience.</p>
-      </div>
+      {!showStartButton && (
+        <>
+          <div className={`testing-info ${isFlipping ? 'flipping' : ''}`}>
+            <p>{infoBlocks[currentBlock]}</p>
+          </div>
+          <button className="next-button" onClick={handleNext}>
+            <img src="/assets/images/ui/next.svg" alt="Next" />
+          </button>
+        </>
+      )}
+
+      {showStartButton && (
+        <div className="central-button-container">
+          <button className="start-button active" onClick={handleStartClick}>
+            <img src="/assets/images/ui/n7.svg" alt="Start Game" />
+            <span>START</span>
+          </button>
+        </div>
+      )}
+
+      {/* Instructions popup remains the same */}
 
       {showInstructions && (
         <div className="instructions-popup">
