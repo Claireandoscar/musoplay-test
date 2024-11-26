@@ -6,23 +6,37 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
   const [showText, setShowText] = useState(false);
   const [typedText, setTypedText] = useState('');
   
-  // Add handleNextClick function
   const handleNextClick = () => {
-    // Immediately trigger the next game
     onNext();
   };
 
-  // Wrap getGameMessage in useCallback
+  // Combined message and styling information
   const getGameMessage = useCallback(() => {
     switch(currentGameNumber) {
       case 1:
-        return "great start!\nHARD LEVEL AHEAD!";
+        return {
+          text: "WELL DONE\nNOW FOR SOMETHING TRICKIER!",
+          color: "#FF8A20",
+          nextButton: "/assets/images/ui/next-orange.svg"
+        };
       case 2:
-        return "well done!\none more challenge to go";
+        return {
+          text: "WARNING!\nEXTRA HARD CHALLENGE AHEAD",
+          color: "#FF2376",
+          nextButton: "/assets/images/ui/next-pink.svg"
+        };
       case 3:
-        return "congratulations!\non to the survey";
+        return {
+          text: "THANK YOU FOR YOUR TIME!\nPRESS NEXT TO ACCESS THE SURVEY",
+          color: "#00C22D",
+          nextButton: "/assets/images/ui/next.svg"
+        };
       default:
-        return "well done!";
+        return {
+          text: "well done!",
+          color: "#FFFFFF",
+          nextButton: "/assets/images/ui/next.svg"
+        };
     }
   }, [currentGameNumber]);
 
@@ -36,11 +50,10 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
     if (score === 10) return "Great Job";
     if (score === 9) return "Nice Work";
     if (score === 8) return "Good Try";
-};
+  };
 
-  // Rest of your code remains the same...
   useEffect(() => {
-    const message = getGameMessage();
+    const message = getGameMessage().text;
     if (showText && typedText.length < message.length) {
       const timer = setTimeout(() => {
         setTypedText(message.slice(0, typedText.length + 1));
@@ -65,6 +78,8 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
       clearTimeout(timer);
     };
   }, [animationStage]);
+
+  const currentGameStyle = getGameMessage();
 
   return (
     <div className="end-game-animation">
@@ -93,13 +108,16 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
         </div>
         {showText && (
           <>
-            <div className="typed-message">
+            <div 
+              className="typed-message"
+              style={{ color: currentGameStyle.color }}
+            >
               {typedText.split('\n').map((line, index) => (
                 <p key={index}>{line}</p>
               ))}
             </div>
             <img 
-              src="/assets/images/ui/next.svg" 
+              src={currentGameStyle.nextButton}
               alt="Next" 
               className="end-animation-next-button"
               onClick={handleNextClick}

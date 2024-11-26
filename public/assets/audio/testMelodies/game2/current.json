@@ -1,9 +1,9 @@
 {
   "melodyParts": [
-    "/assets/audio/testMelodies/game2/bar1n5n4QLn3QRn5n4QLn2QR.mp3",
-    "/assets/audio/testMelodies/game2/bar2n1QLn2QRn3QLn4QRn5QLn4QRn3QLn2QR.mp3",
-    "/assets/audio/testMelodies/game2/bar3n1QLn8QRn7QLn8QRn6QLn8QRn5QLn3QR.mp3",
-    "/assets/audio/testMelodies/game2/bar4n4QLn3QRn2QLn3QRn1QLn2QRn3QLn1QR.mp3"
+    "/assets/audio/testMelodies/game2/bar1n1n5n8n3.mp3",
+    "/assets/audio/testMelodies/game2/bar2n6QLn5QRn4QLn6QRn5n3.mp3",
+    "/assets/audio/testMelodies/game2/bar3n6QLn5QRn4QLn6QRn5n2.mp3",
+    "/assets/audio/testMelodies/game2/bar4n3n2QLn3QRn1n1.mp3"
   ],
-  "fullTune": "/assets/audio/testMelodies/game2/test2tune.mp3"
+  "fullTune": "/assets/audio/testMelodies/game2/test3tune.mp3"
 }
