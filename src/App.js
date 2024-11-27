@@ -147,30 +147,13 @@ const notes = [
 // New loadAudio function using simple Audio API
 const loadAudio = useCallback(async (barIndex) => {
     if (audioFiles.length === 0 || barIndex >= audioFiles.length) {
-        console.log('No audio files available or invalid bar index');
         return;
     }
 
     const audioPath = audioFiles[barIndex];
-    console.log('Loading audio for bar:', barIndex, 'from path:', audioPath);
-
-    try {
-        const audio = new Audio(audioPath);
-        
-        await new Promise((resolve, reject) => {
-            audio.addEventListener('canplaythrough', () => resolve());
-            audio.addEventListener('error', (e) => reject(e));
-            audio.onerror = () => reject(new Error(`Failed to load audio: ${audioPath}`));
-        });
-
-        setMelodyAudio(audio);
-        console.log('Successfully loaded audio for bar:', barIndex);
-        return audio;
-    } catch (error) {
-        console.error(`Failed to load audio for Bar ${barIndex + 1}:`, error);
-        setMelodyAudio(null);
-        return null;
-    }
+    const audio = new Audio(audioPath);
+    setMelodyAudio(audio);
+    return audio;
 }, [audioFiles]);
 
 // Load audio when bar changes
@@ -258,27 +241,9 @@ useEffect(() => {
 
 // Add this effect after your other useEffects
 useEffect(() => {
-  const loadFullTune = async () => {
-      if (!fullTunePath) return;
-      try {
-          console.log('Loading full tune from:', fullTunePath);
-          const audio = new Audio(fullTunePath);
-          
-          // Wait for audio to be loaded
-          await new Promise((resolve, reject) => {
-              audio.addEventListener('canplaythrough', () => resolve());
-              audio.addEventListener('error', (e) => reject(e));
-              audio.onerror = () => reject(new Error(`Failed to load full tune: ${fullTunePath}`));
-          });
-          
-          setFullTuneMelodyAudio(audio);
-          console.log('Full tune loaded successfully');
-      } catch (error) {
-          console.error('Failed to load full tune:', error);
-      }
-  };
-
-  loadFullTune();
+    if (!fullTunePath) return;
+    const audio = new Audio(fullTunePath);
+    setFullTuneMelodyAudio(audio);
 }, [fullTunePath]);
 
 // Handle game start
