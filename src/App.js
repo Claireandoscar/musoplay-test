@@ -89,13 +89,13 @@ function App() {
   // Audio-related states
   const [audioFiles, setAudioFiles] = useState([]);
   const [fullTunePath, setFullTunePath] = useState('');
-  const [fullTuneAudio, setFullTuneAudio] = useState(null);
-  const [currentBarAudio, setCurrentBarAudio] = useState(null);
-  const [wrongNoteAudio, setWrongNoteAudio] = useState(null);
-  const [barCompleteAudio, setBarCompleteAudio] = useState(null);
-  const [barFailedAudio, setBarFailedAudio] = useState(null);
-  const [audioContext, setAudioContext] = useState(null);
-  const [currentAudioSource, setCurrentAudioSource] = useState(null);
+  const [melodyAudio, setMelodyAudio] = useState(null);
+  const [fullTuneMelodyAudio, setFullTuneMelodyAudio] = useState(null);
+  const [uiSounds] = useState({
+      wrongNote: new Audio('/assets/audio/ui-sounds/wrong-note.mp3'),
+      barComplete: new Audio('/assets/audio/ui-sounds/bar-complete.mp3'),
+      barFailed: new Audio('/assets/audio/ui-sounds/bar-failed.mp3')
+  });
 
   // Game state and progress
   const [showStartScreen, setShowStartScreen] = useState(true);
@@ -117,32 +117,23 @@ function App() {
 
   useEffect(() => {
     const fetchAudioFiles = async () => {
-      try {
-        const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
-        console.log('Attempting to fetch JSON from:', jsonPath);
-        const response = await fetch(jsonPath);
-        const data = await response.json();
-        console.log('Loaded audio files:', data);
-        setAudioFiles(data.melodyParts);
-        setFullTunePath(data.fullTune);
-      } catch (error) {
-        console.error('Failed to load current.json:', error);
-      }
+        try {
+            const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
+            console.log('Attempting to fetch JSON from:', jsonPath);
+            const response = await fetch(jsonPath);
+            const data = await response.json();
+            console.log('Loaded audio files:', data);
+            setAudioFiles(data.melodyParts);
+            setFullTunePath(data.fullTune);
+        } catch (error) {
+            console.error('Failed to load current.json:', error);
+        }
     };
-  
+
     fetchAudioFiles();
 }, [currentGameNumber]);
- 
-  const initializeAudioContext = useCallback(() => {
-    if (!audioContext) {
-      const newAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-      setAudioContext(newAudioContext);
-      return newAudioContext;
-    }
-    return audioContext;
-  }, [audioContext]);
 
-  const notes = [
+const notes = [
     { id: 1, color: 'red', noteNumber: 1 },
     { id: 2, color: 'orange', noteNumber: 2 },
     { id: 3, color: 'yellow', noteNumber: 3 },
@@ -151,103 +142,102 @@ function App() {
     { id: 6, color: 'blue', noteNumber: 6 },
     { id: 7, color: 'purple', noteNumber: 7 },
     { id: 8, color: 'red', noteNumber: 8 },
-  ];
+];
 
-  const handleListenPractice = useCallback(() => {
-    // Always play the melody when clicked
-    if (currentBarAudio && audioContext) {
-        audioContext.resume().then(() => {
-            const source = audioContext.createBufferSource();
-            source.buffer = currentBarAudio;
-            source.connect(audioContext.destination);
-            source.start();
-        });
+// New loadAudio function using simple Audio API
+const loadAudio = useCallback(async (barIndex) => {
+    if (audioFiles.length === 0 || barIndex >= audioFiles.length) {
+        console.log('No audio files available or invalid bar index');
+        return;
     }
 
-    // Always ensure we're in practice mode
+    const audioPath = audioFiles[barIndex];
+    console.log('Loading audio for bar:', barIndex, 'from path:', audioPath);
+
+    try {
+        const audio = new Audio(audioPath);
+        
+        await new Promise((resolve, reject) => {
+            audio.addEventListener('canplaythrough', () => resolve());
+            audio.addEventListener('error', (e) => reject(e));
+            audio.onerror = () => reject(new Error(`Failed to load audio: ${audioPath}`));
+        });
+
+        setMelodyAudio(audio);
+        console.log('Successfully loaded audio for bar:', barIndex);
+        return audio;
+    } catch (error) {
+        console.error(`Failed to load audio for Bar ${barIndex + 1}:`, error);
+        setMelodyAudio(null);
+        return null;
+    }
+}, [audioFiles]);
+
+// Load audio when bar changes
+useEffect(() => {
+    if (correctSequence.length > 0) {
+        loadAudio(currentBarIndex);
+    }
+}, [currentBarIndex, correctSequence, loadAudio]);
+
+// Handle practice mode
+const handleListenPractice = useCallback(() => {
+    if (melodyAudio) {
+        melodyAudio.currentTime = 0;
+        melodyAudio.play().catch(error => console.error("Audio playback failed:", error));
+    }
+
     dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
     setGameMode('practice');
-    setIsListenPracticeMode(true);  // Always keep it true after first activation
-}, [currentBarAudio, audioContext, dispatch]);
+    setIsListenPracticeMode(true);
+}, [melodyAudio, dispatch]);
 
-
+// Handle perform mode
 const handlePerform = useCallback(() => {
-    // If we're already in perform mode, just play the melody
     if (gameState.gamePhase === 'perform') {
-        if (currentBarAudio && audioContext) {
-            audioContext.resume().then(() => {
-                const source = audioContext.createBufferSource();
-                source.buffer = currentBarAudio;
-                source.connect(audioContext.destination);
-                source.start();
-            });
+        if (melodyAudio) {
+            melodyAudio.currentTime = 0;
+            melodyAudio.play().catch(error => console.error("Audio playback failed:", error));
         }
     } else {
-        // Initial transition to perform mode
         dispatch({ type: 'SET_GAME_PHASE', payload: 'perform' });
         setGameMode('play');
         setIsListenPracticeMode(false);
         dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
     }
-}, [gameState.gamePhase, currentBarAudio, audioContext, dispatch]);
+}, [gameState.gamePhase, melodyAudio, dispatch]);
 
-
+// Handle viewport height
 useEffect(() => {
-  async function loadFullTune() {
-      if (!fullTunePath) return;
-      try {
-          console.log('Loading full tune from:', fullTunePath);  // Debug log
-          const response = await fetch(fullTunePath);
-          const arrayBuffer = await response.arrayBuffer();
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          setFullTuneAudio(audioBuffer);
-          console.log('Full tune loaded successfully');  // Debug log
-      } catch (error) {
-          console.error('Failed to load full tune:', error, fullTunePath);
-      }
-  }
-
-  loadFullTune();
-}, [fullTunePath]);
-
-  useEffect(() => {
     function setVH() {
-      let vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
     }
 
     setVH();
     window.addEventListener('resize', setVH);
-
     return () => window.removeEventListener('resize', setVH);
-  }, []);
+}, []);
 
-  useEffect(() => {
+// Update body class
+useEffect(() => {
     document.body.className = gameMode;
-  }, [gameMode]);
+}, [gameMode]);
 
-  useEffect(() => {
+// Process audio files into sequences
+useEffect(() => {
     if (audioFiles.length > 0) {
         console.log('Processing audio files:', audioFiles);
         
         const sequences = audioFiles.map(filepath => {
             const filename = filepath.split('/').pop();
-            console.log('Processing filename:', filename);
-            
-            // Extract everything after the 'bar' prefix
             const noteSection = filename.split('bar')[1];
-            console.log('Note section:', noteSection);
             
-            // Split by 'n' and remove the first element (bar number) and .mp3
             const noteSequence = noteSection
                 .split('n')
-                .slice(1)  // Remove bar number
+                .slice(1)
                 .map(note => note.replace('.mp3', ''));
             
-            console.log('Extracted note sequence:', noteSequence);
-            
-            // Fixed processing of notes into objects
             const processedSequence = noteSequence.map(note => {
                 const cleanNote = note.replace('.mp3', '');
                 return {
@@ -258,119 +248,78 @@ useEffect(() => {
                 };
             });
             
-            console.log('Processed sequence with note objects:', processedSequence);
             return processedSequence;
         });
         
-        console.log('Final sequences array with full note objects:', sequences);
         setCorrectSequence(sequences);
         dispatch({ type: 'RESET_COMPLETED_BARS' });
     }
 }, [audioFiles, dispatch]);
 
+// Add this effect after your other useEffects
 useEffect(() => {
-    const cleanupAudio = () => {
-      if (currentAudioSource) {
-        try {
-          currentAudioSource.stop();
-          currentAudioSource.disconnect();
-        } catch (error) {
-          console.log('Error cleaning up audio source:', error);
-        }
-      }
-      setWrongNoteAudio(null);
-      setBarCompleteAudio(null);
-      setBarFailedAudio(null);
-    };
-    return cleanupAudio;
-  }, [currentAudioSource]); 
-
-  useEffect(() => {
-    const cleanup = () => {
-      if (window.gc) {
-        window.gc();
-      }
-    };
-    document.addEventListener('visibilitychange', cleanup);
-    return () => {
-      document.removeEventListener('visibilitychange', cleanup);
-      cleanup();
-    };
-  }, []);
-
-  useEffect(() => {
-    const loadAudio = async (audioPath, setAudioState) => {
+  const loadFullTune = async () => {
+      if (!fullTunePath) return;
       try {
-        const response = await fetch(audioPath);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        setAudioState(audioBuffer);
+          console.log('Loading full tune from:', fullTunePath);
+          const audio = new Audio(fullTunePath);
+          
+          // Wait for audio to be loaded
+          await new Promise((resolve, reject) => {
+              audio.addEventListener('canplaythrough', () => resolve());
+              audio.addEventListener('error', (e) => reject(e));
+              audio.onerror = () => reject(new Error(`Failed to load full tune: ${fullTunePath}`));
+          });
+          
+          setFullTuneMelodyAudio(audio);
+          console.log('Full tune loaded successfully');
       } catch (error) {
-        console.error(`Failed to load audio: ${audioPath}`, error);
+          console.error('Failed to load full tune:', error);
       }
-    };
+  };
 
-    loadAudio('/assets/audio/ui-sounds/wrong-note.mp3', setWrongNoteAudio);
-    loadAudio('/assets/audio/ui-sounds/bar-complete.mp3', setBarCompleteAudio);
-    loadAudio('/assets/audio/ui-sounds/bar-failed.mp3', setBarFailedAudio);
-  }, []);
+  loadFullTune();
+}, [fullTunePath]);
 
-  const loadAudio = useCallback(async (barIndex) => {
-    if (audioFiles.length === 0) return;
-    const audioPath = audioFiles[barIndex];
-    try {
-      const response = await fetch(audioPath);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      const ctx = initializeAudioContext();
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      setCurrentBarAudio(audioBuffer);
-    } catch (error) {
-      console.error(`Failed to load audio for Bar ${barIndex + 1}:`, error);
-      setCurrentBarAudio(null);
-    }
-  }, [audioFiles, initializeAudioContext]);
-
-  useEffect(() => {
-    if (correctSequence.length > 0) {
-      loadAudio(currentBarIndex);
-    }
-  }, [currentBarIndex, correctSequence, loadAudio]);
-
-  const handleStartGame = () => {
-    const ctx = initializeAudioContext();
-    ctx.resume().then(() => {
-        // Reset screen and game mode states
-        setShowStartScreen(false);
-        setGameMode('initial');
-        
-        // Use dispatch for game state resets
-        dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
-        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-        dispatch({ type: 'RESET_BAR_HEARTS' });
-        dispatch({ type: 'RESET_COMPLETED_BARS' });
-        dispatch({ type: 'SET_BAR_FAILING', failing: false });
-        
-        // Reset other states
-        setScore(0);
-        setCurrentBarIndex(0);
-        setIsGameComplete(false);
-        setIsGameEnded(false);
-        setShowEndAnimation(false);
-        setIsListenPracticeMode(false);
-        setFailedBars([false, false, false, false]);
-    });
+// Handle game start
+const handleStartGame = () => {
+    setShowStartScreen(false);
+    setGameMode('initial');
+    
+    dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
+    dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+    dispatch({ type: 'RESET_BAR_HEARTS' });
+    dispatch({ type: 'RESET_COMPLETED_BARS' });
+    dispatch({ type: 'SET_BAR_FAILING', failing: false });
+    
+    setScore(0);
+    setCurrentBarIndex(0);
+    setIsGameComplete(false);
+    setIsGameEnded(false);
+    setShowEndAnimation(false);
+    setIsListenPracticeMode(false);
+    setFailedBars([false, false, false, false]);
 };
+
+// Cleanup effect for audio
+useEffect(() => {
+    return () => {
+        if (melodyAudio) {
+            melodyAudio.pause();
+            melodyAudio.currentTime = 0;
+        }
+    };
+}, [melodyAudio]);
+
 
 
 const moveToNextBar = useCallback((isSuccess = true) => {
-  // Clear previous bar data
-  setCurrentBarAudio(null);
+  // Clear previous bar audio
+  if (melodyAudio) {
+      melodyAudio.pause();
+      melodyAudio.currentTime = 0;
+  }
   
-  // Function to handle end of game
   const handleGameEnd = async () => {
       setIsGameComplete(true);
       setIsGameEnded(true);
@@ -383,57 +332,36 @@ const moveToNextBar = useCallback((isSuccess = true) => {
       });
       dispatch({ type: 'SET_GAME_PHASE', payload: 'ended' });
 
-      // Wait for state updates before showing animation
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setShowEndAnimation(true);
-      if (fullTuneAudio) {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const source = audioContext.createBufferSource();
-          const gainNode = audioContext.createGain();
-          
-          source.buffer = fullTuneAudio;
-          source.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          source.start();
-          
-          source.gainNode = gainNode;
-          setCurrentAudioSource(source);
+      if (fullTuneMelodyAudio) {
+          fullTuneMelodyAudio.currentTime = 0;
+          fullTuneMelodyAudio.play().catch(error => console.error("Audio playback failed:", error));
       }
   };
 
-  // Function to handle moving to next bar
   const handleNextBar = async () => {
-      // Update completed bars
       dispatch({ 
           type: 'UPDATE_COMPLETED_BARS', 
           barIndex: currentBarIndex,
           completed: true
       });
 
-      // Play completion sound if successful
-      if (barCompleteAudio && isSuccess) {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const source = audioContext.createBufferSource();
-          source.buffer = barCompleteAudio;
-          source.connect(audioContext.destination);
-          source.start();
+      if (isSuccess) {
+          uiSounds.barComplete.currentTime = 0;
+          uiSounds.barComplete.play().catch(error => console.error("Audio playback failed:", error));
       }
 
-      // Reset states for next bar
       dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
       dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
       setGameMode('initial');
       setIsListenPracticeMode(false);
       
-      // Load audio for next bar
       await loadAudio(currentBarIndex + 1);
-
-      // Finally update the bar index
       setCurrentBarIndex(prev => prev + 1);
   };
 
-  // Main logic
   const nextBarIndex = currentBarIndex + 1;
   if (nextBarIndex < correctSequence.length) {
       handleNextBar();
@@ -442,108 +370,81 @@ const moveToNextBar = useCallback((isSuccess = true) => {
   }
 }, [
   currentBarIndex, 
-  correctSequence.length, 
-  fullTuneAudio,
-  setCurrentAudioSource,
+  correctSequence.length,
+  fullTuneMelodyAudio,
+  melodyAudio,
   dispatch,
-  barCompleteAudio,   // Added back, needs a comma here
-  loadAudio           // Added back as last item
-]);                     // Close the array and callback
-  // Function to handle audio fade out
-  const handleNextGame = () => {
-    if (currentGameNumber >= 3) {
-        console.log('All games completed - should redirect to survey');
-        return;
-    }
+  uiSounds,
+  loadAudio
+]);
 
-    // Clear existing audio
-    if (currentAudioSource) {
-        try {
-            currentAudioSource.stop();
-            currentAudioSource.disconnect();
-            setCurrentAudioSource(null);
-        } catch (error) {
-            console.log('Error cleaning up audio source:', error);
-        }
-    }
+const handleNextGame = () => {
+  if (currentGameNumber >= 3) {
+      console.log('All games completed - should redirect to survey');
+      return;
+  }
 
-    // Reset all state
-    setAudioFiles([]);
-    setFullTuneAudio(null);
-    setCurrentBarAudio(null);
-    setScore(0);
-    setCurrentBarIndex(0);
-    setFailedBars([false, false, false, false]);
-    
-    // Reset reducer state
-    dispatch({ type: 'RESET_GAME_STATE' });
-    
-    // Function to handle audio fade out
-    const fadeOutAudio = async () => {
-        if (currentAudioSource) {
-            try {
-                const gainNode = currentAudioSource.gainNode;
-                gainNode.gain.linearRampToValueAtTime(0, currentAudioSource.context.currentTime + 0.5);
-                
-                await new Promise(resolve => setTimeout(resolve, 500));
-                currentAudioSource.stop();
-                setCurrentAudioSource(null);
-            } catch (error) {
-                console.log('Error with audio fade:', error);
-                // Cleanup even if fade fails
-                setCurrentAudioSource(null);
-            }
-        }
-    };
+  // Clear existing audio
+  if (melodyAudio) {
+      melodyAudio.pause();
+      melodyAudio.currentTime = 0;
+      setMelodyAudio(null);
+  }
 
-    // Function to reset game states
-    const resetGameStates = () => {
-        // Game progression
-        setCurrentGameNumber(prev => prev + 1);
-        
-        // Clear completion states
-        setIsGameComplete(false);
-        setShowEndAnimation(false);
-        setIsGameEnded(false);
-        
-        // Reset gameplay states
-        setScore(0);
-        setCurrentBarIndex(0);
-        setFailedBars([false, false, false, false]);
-        
-        // Reset game modes
-        setGameMode('initial');
-        dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
-        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-        dispatch({ type: 'RESET_BAR_HEARTS' });
-        dispatch({ type: 'RESET_COMPLETED_BARS' });
-        
-        // Reset UI states
-        setIsListenPracticeMode(false);
-    };
+  if (fullTuneMelodyAudio) {
+      fullTuneMelodyAudio.pause();
+      fullTuneMelodyAudio.currentTime = 0;
+  }
 
-    // Main execution
-    const startNextGame = async () => {
-        await fadeOutAudio();
-        resetGameStates();
-        const ctx = initializeAudioContext();
-        await ctx.resume();
-    };
+  // Reset all state
+  setAudioFiles([]);
+  setScore(0);
+  setCurrentBarIndex(0);
+  setFailedBars([false, false, false, false]);
+  
+  // Reset reducer state
+  dispatch({ type: 'RESET_GAME_STATE' });
 
-    startNextGame();
+  // Reset game states
+  const resetGameStates = () => {
+      // Game progression
+      setCurrentGameNumber(prev => prev + 1);
+      
+      // Clear completion states
+      setIsGameComplete(false);
+      setShowEndAnimation(false);
+      setIsGameEnded(false);
+      
+      // Reset gameplay states
+      setScore(0);
+      setCurrentBarIndex(0);
+      setFailedBars([false, false, false, false]);
+      
+      // Reset game modes
+      setGameMode('initial');
+      dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
+      dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+      dispatch({ type: 'RESET_BAR_HEARTS' });
+      dispatch({ type: 'RESET_COMPLETED_BARS' });
+      
+      // Reset UI states
+      setIsListenPracticeMode(false);
+  };
+
+  resetGameStates();
 };
 
 const handleNotePlay = useCallback((noteNumber) => {
   console.log('Note play start state:', {
-    noteNumber,
-    gamePhase: gameState.gamePhase,
-    currentBarIndex,
-    currentNoteIndex: gameState.currentNoteIndex,
-    currentSequence: correctSequence[currentBarIndex],
+      noteNumber,
+      gamePhase: gameState.gamePhase,
+      currentBarIndex,
+      currentNoteIndex: gameState.currentNoteIndex,
+      currentSequence: correctSequence[currentBarIndex],
   });
 
   if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
-    return;
+      return;
   }
 
   // Play note sound
@@ -551,101 +452,54 @@ const handleNotePlay = useCallback((noteNumber) => {
   audio.play().catch(error => console.error("Audio playback failed:", error));
 
   if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
-    const currentSequence = correctSequence[currentBarIndex];
-    const currentNote = currentSequence[gameState.currentNoteIndex];
-    
-    console.log('Checking note:', {
-      played: noteNumber,
-      expected: currentNote?.number,
-      noteIndex: gameState.currentNoteIndex,
-      sequence: currentSequence
-    });
-
-    const isCorrectNote = noteNumber === currentNote.number;
-
-    if (isCorrectNote) {
-      const newNoteIndex = gameState.currentNoteIndex + 1;
-      console.log('Correct note, updating index:', newNoteIndex);
+      const currentSequence = correctSequence[currentBarIndex];
+      const currentNote = currentSequence[gameState.currentNoteIndex];
       
-      dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
+      const isCorrectNote = noteNumber === currentNote.number;
 
-      if (newNoteIndex === currentSequence.length) {
-        const updatedScore = gameState.barHearts[currentBarIndex];
-        setScore(prevScore => prevScore + updatedScore);
-        moveToNextBar(true);
-      }
-    } else {
-      // Handle wrong note with immediate state cleanup
-      const handleWrongNote = async () => {
-        console.log('Wrong note played - clearing notes');
-        
-        // First, set bar failing state
-        dispatch({ 
-            type: 'SET_BAR_FAILING',
-            failing: true
-        });
-     
-        // Immediately reset note index to clear visible notes
-        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-     
-        // Then update hearts
-        dispatch({ 
-            type: 'WRONG_NOTE',
-            barIndex: currentBarIndex
-        });
-     
-        // Play wrong note sound
-        if (wrongNoteAudio) {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const source = audioContext.createBufferSource();
-          source.buffer = wrongNoteAudio;
-          source.connect(audioContext.destination);
-          source.start();
-      }
-     
-        // Check if bar failed
-        if (gameState.barHearts[currentBarIndex] <= 1) {
-            // Play bar failed sound after a short delay
-            setTimeout(() => {
-                if (barFailedAudio) {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const source = audioContext.createBufferSource();
-                    source.buffer = barFailedAudio;
-                    source.connect(audioContext.destination);
-                    source.start();
-                }
-            }, 300);
-     
-            // Move to next bar after failure animation
-            setTimeout(() => {
-                dispatch({ 
-                    type: 'SET_BAR_FAILING',
-                    failing: false
-                });
-                moveToNextBar(false);
-            }, 1500);
-        } else {
-            // Reset bar failing state if bar hasn't failed completely
-            setTimeout(() => {
-                dispatch({ 
-                    type: 'SET_BAR_FAILING',
-                    failing: false
-                });
-            }, 500);
-        }
-     };
+      if (isCorrectNote) {
+          const newNoteIndex = gameState.currentNoteIndex + 1;
+          dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
 
-      handleWrongNote();
-    }
+          if (newNoteIndex === currentSequence.length) {
+              const updatedScore = gameState.barHearts[currentBarIndex];
+              setScore(prevScore => prevScore + updatedScore);
+              moveToNextBar(true);
+          }
+      } else {
+          // Handle wrong note
+          dispatch({ type: 'SET_BAR_FAILING', failing: true });
+          dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+          dispatch({ type: 'WRONG_NOTE', barIndex: currentBarIndex });
+
+          // Play wrong note sound
+          uiSounds.wrongNote.currentTime = 0;
+          uiSounds.wrongNote.play().catch(error => console.error("Audio playback failed:", error));
+
+          if (gameState.barHearts[currentBarIndex] <= 1) {
+              setTimeout(() => {
+                  uiSounds.barFailed.currentTime = 0;
+                  uiSounds.barFailed.play().catch(error => console.error("Audio playback failed:", error));
+              }, 300);
+
+              setTimeout(() => {
+                  dispatch({ type: 'SET_BAR_FAILING', failing: false });
+                  moveToNextBar(false);
+              }, 1500);
+          } else {
+              setTimeout(() => {
+                  dispatch({ type: 'SET_BAR_FAILING', failing: false });
+              }, 500);
+          }
+      }
   }
 }, [
-gameState,
-correctSequence,
-currentBarIndex,
-dispatch,
-moveToNextBar,
-wrongNoteAudio,
-barFailedAudio
+  gameState,
+  correctSequence,
+  currentBarIndex,
+  dispatch,
+  moveToNextBar,
+  uiSounds
 ]);
 
 return (
@@ -674,13 +528,13 @@ return (
                   gamePhase={gameState.gamePhase}
               />
               <Controls 
-                  onListenPractice={handleListenPractice}
-                  onPerform={handlePerform}
-                  isListenPracticeMode={isListenPracticeMode}
-                  isPerformAvailable={true}
-                  isAudioLoaded={!!currentBarAudio}
-                  gamePhase={gameState.gamePhase}
-              />
+    onListenPractice={handleListenPractice}
+    onPerform={handlePerform}
+    isListenPracticeMode={isListenPracticeMode}
+    isPerformAvailable={true}
+    isAudioLoaded={!!melodyAudio}  // Changed to use melodyAudio
+    gamePhase={gameState.gamePhase}
+/>
               <VirtualInstrument 
                   notes={notes}
                   onNotePlay={handleNotePlay}
