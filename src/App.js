@@ -93,25 +93,33 @@ function App() {
     const [melodyAudio, setMelodyAudio] = useState(null);
     const [fullTuneMelodyAudio, setFullTuneMelodyAudio] = useState(null);
   
-    useEffect(() => {
-      const initAudio = async () => {
-        await audioEngine.init();
-      };
-    
-      const handleInteraction = () => {
-        initAudio();
-        document.removeEventListener('touchstart', handleInteraction);
-        document.removeEventListener('mousedown', handleInteraction);
-      };
-    
-      document.addEventListener('touchstart', handleInteraction);
-      document.addEventListener('mousedown', handleInteraction);
-    
-      return () => {
-        document.removeEventListener('touchstart', handleInteraction);
-        document.removeEventListener('mousedown', handleInteraction);
-      };
-    }, []);
+    // Inside App component
+useEffect(() => {
+  // Initialize audio engine on first user interaction
+  const initAudio = async () => {
+    console.log('Initializing audio engine'); // Add debug log
+    await audioEngine.init();
+    console.log('Audio engine initialized'); // Add debug log
+  };
+
+  const handleInteraction = () => {
+    console.log('Touch/click interaction detected'); // Add debug log
+    initAudio().catch(error => {
+      console.error('Failed to initialize audio:', error);
+    });
+    document.removeEventListener('touchstart', handleInteraction);
+    document.removeEventListener('mousedown', handleInteraction);
+  };
+
+  // Add listeners for both touch and mouse events
+  document.addEventListener('touchstart', handleInteraction, { passive: false });
+  document.addEventListener('mousedown', handleInteraction);
+
+  return () => {
+    document.removeEventListener('touchstart', handleInteraction);
+    document.removeEventListener('mousedown', handleInteraction);
+  };
+}, []);
 
   // Game state and progress
   const [showStartScreen, setShowStartScreen] = useState(true);
@@ -425,13 +433,21 @@ const moveToNextBar = useCallback((isSuccess = true) => {
   
     resetGameStates();
   };
-const handleNotePlay = useCallback((noteNumber) => {
+  const handleNotePlay = useCallback((noteNumber) => {
+    console.log('handleNotePlay called with note:', noteNumber); // Debug log
+  
     if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
+      console.log('Note ignored - wrong game phase:', gameState.gamePhase);
       return;
     }
   
     // Play note using audio engine
-    audioEngine.playNote(noteNumber);
+    try {
+      audioEngine.playNote(noteNumber);
+      console.log('Note played successfully:', noteNumber);
+    } catch (error) {
+      console.error('Failed to play note:', error);
+    }
   
     if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
       const currentSequence = correctSequence[currentBarIndex];
@@ -480,7 +496,7 @@ const handleNotePlay = useCallback((noteNumber) => {
     currentBarIndex,
     dispatch,
     moveToNextBar
-  ]); 
+  ]);
 return (
   <div className="game-wrapper">
       {showStartScreen ? (
