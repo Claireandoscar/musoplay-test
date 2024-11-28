@@ -5,6 +5,7 @@
   "dependencies": {
     "chokidar": "^4.0.1",
     "fs-extra": "^11.2.0",
+    "logrocket": "^9.0.0",
     "lucide-react": "^0.292.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

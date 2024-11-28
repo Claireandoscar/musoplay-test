@@ -8,6 +8,8 @@ import VirtualInstrument from './components/VirtualInstrument';
 import ProgressBar from './components/ProgressBar';
 import EndGameAnimation from './components/EndGameAnimation';
 import StartScreen from './components/StartScreen';
+import LogRocket from 'logrocket';
+LogRocket.init('gwciye/musoplay');  
 
 const initialGameState = {
   currentNoteIndex: 0,
