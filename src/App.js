@@ -87,6 +87,11 @@ function App() {
   const [gameState, dispatch] = useReducer(gameReducer, initialGameState);
   
   // Audio-related states
+  // Add these back to your audio-related states section
+  // In your audio-related states section
+  const [barCompleteAudio, setBarCompleteAudio] = useState(null);
+  const [wrongNoteAudio, setWrongNoteAudio] = useState(null);
+  const [barFailedAudio, setBarFailedAudio] = useState(null);
   const [audioFiles, setAudioFiles] = useState([]);
   const [fullTunePath, setFullTunePath] = useState('');
   const [melodyAudio, setMelodyAudio] = useState(null);
@@ -239,6 +244,23 @@ useEffect(() => {
     }
 }, [audioFiles, dispatch]);
 
+useEffect(() => {
+    const loadAudio = async (audioPath, setAudioState) => {
+      try {
+        const response = await fetch(audioPath);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        setAudioState(audioBuffer);
+      } catch (error) {
+        console.error(`Failed to load audio: ${audioPath}`, error);
+      }
+    };
+
+    loadAudio('/assets/audio/ui-sounds/wrong-note.mp3', setWrongNoteAudio);
+    loadAudio('/assets/audio/ui-sounds/bar-complete.mp3', setBarCompleteAudio);
+    loadAudio('/assets/audio/ui-sounds/bar-failed.mp3', setBarFailedAudio);
+}, []);
 // Add this effect after your other useEffects
 useEffect(() => {
     if (!fullTunePath) return;
@@ -400,73 +422,120 @@ const handleNextGame = () => {
 };
 
 const handleNotePlay = useCallback((noteNumber) => {
-  console.log('Note play start state:', {
+    console.log('Note play start state:', {
       noteNumber,
       gamePhase: gameState.gamePhase,
       currentBarIndex,
       currentNoteIndex: gameState.currentNoteIndex,
       currentSequence: correctSequence[currentBarIndex],
-  });
-
-  if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
+    });
+  
+    if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
       return;
-  }
-
-  // Play note sound
-  const audio = new Audio(`/assets/audio/n${noteNumber}.mp3`);
-  audio.play().catch(error => console.error("Audio playback failed:", error));
-
-  if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
+    }
+  
+    // Play note sound
+    const audio = new Audio(`/assets/audio/n${noteNumber}.mp3`);
+    audio.play().catch(error => console.error("Audio playback failed:", error));
+  
+    if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
       const currentSequence = correctSequence[currentBarIndex];
       const currentNote = currentSequence[gameState.currentNoteIndex];
       
+      console.log('Checking note:', {
+        played: noteNumber,
+        expected: currentNote?.number,
+        noteIndex: gameState.currentNoteIndex,
+        sequence: currentSequence
+      });
+  
       const isCorrectNote = noteNumber === currentNote.number;
-
+  
       if (isCorrectNote) {
-          const newNoteIndex = gameState.currentNoteIndex + 1;
-          dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
-
-          if (newNoteIndex === currentSequence.length) {
-              const updatedScore = gameState.barHearts[currentBarIndex];
-              setScore(prevScore => prevScore + updatedScore);
-              moveToNextBar(true);
-          }
+        const newNoteIndex = gameState.currentNoteIndex + 1;
+        console.log('Correct note, updating index:', newNoteIndex);
+        
+        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
+  
+        if (newNoteIndex === currentSequence.length) {
+          const updatedScore = gameState.barHearts[currentBarIndex];
+          setScore(prevScore => prevScore + updatedScore);
+          moveToNextBar(true);
+        }
       } else {
-          // Handle wrong note
-          dispatch({ type: 'SET_BAR_FAILING', failing: true });
+        // Handle wrong note with immediate state cleanup
+        const handleWrongNote = async () => {
+          console.log('Wrong note played - clearing notes');
+          
+          // First, set bar failing state
+          dispatch({ 
+              type: 'SET_BAR_FAILING',
+              failing: true
+          });
+       
+          // Immediately reset note index to clear visible notes
           dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-          dispatch({ type: 'WRONG_NOTE', barIndex: currentBarIndex });
-
+       
+          // Then update hearts
+          dispatch({ 
+              type: 'WRONG_NOTE',
+              barIndex: currentBarIndex
+          });
+       
           // Play wrong note sound
-          uiSounds.wrongNote.currentTime = 0;
-          uiSounds.wrongNote.play().catch(error => console.error("Audio playback failed:", error));
-
+          if (wrongNoteAudio) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createBufferSource();
+            source.buffer = wrongNoteAudio;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+       
+          // Check if bar failed
           if (gameState.barHearts[currentBarIndex] <= 1) {
+              // Play bar failed sound after a short delay
               setTimeout(() => {
-                  uiSounds.barFailed.currentTime = 0;
-                  uiSounds.barFailed.play().catch(error => console.error("Audio playback failed:", error));
+                  if (barFailedAudio) {
+                      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                      const source = audioContext.createBufferSource();
+                      source.buffer = barFailedAudio;
+                      source.connect(audioContext.destination);
+                      source.start();
+                  }
               }, 300);
-
+       
+              // Move to next bar after failure animation
               setTimeout(() => {
-                  dispatch({ type: 'SET_BAR_FAILING', failing: false });
+                  dispatch({ 
+                      type: 'SET_BAR_FAILING',
+                      failing: false
+                  });
                   moveToNextBar(false);
               }, 1500);
           } else {
+              // Reset bar failing state if bar hasn't failed completely
               setTimeout(() => {
-                  dispatch({ type: 'SET_BAR_FAILING', failing: false });
+                  dispatch({ 
+                      type: 'SET_BAR_FAILING',
+                      failing: false
+                  });
               }, 500);
           }
+       };
+  
+        handleWrongNote();
       }
-  }
-}, [
+    }
+  }, [
   gameState,
   correctSequence,
   currentBarIndex,
   dispatch,
   moveToNextBar,
-  uiSounds
-]);
-
+  wrongNoteAudio,
+  barFailedAudio
+  ]);
+  
 return (
   <div className="game-wrapper">
       {showStartScreen ? (
