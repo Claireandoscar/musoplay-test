@@ -14,15 +14,17 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0); 
   transition: transform 0.3s ease;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .cube-button:focus {
-  outline: none; /* Remove default focus outline */
+  outline: none;
 }
 
 .cube-button:focus-visible {
-  /* Add custom focus indicator that doesn't interfere with the 3D effect */
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.6);
   border-radius: 4px;
 }
@@ -31,22 +33,18 @@
   position: absolute;
   width: 100%;
   height: 100%;
+  top: 0;
+  left: 0;
   backface-visibility: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: transparent;
-  transition: all 0.3s ease;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.3s ease;
 }
 
 .cube-face.front {
-  transform: translateZ(30px);
+  transform: translateZ(0);
 }
 
 .cube-face.bottom {
-  transform: rotateX(180deg) translateZ(30px);
+  transform: rotateX(180deg);
 }
 
 .cube-image {
@@ -61,43 +59,30 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Game ended state */
 .cube-button:disabled,
 .cube-button.game-ended {
   pointer-events: none;
+  transform-origin: center center;
   transform: rotateX(-180deg);
 }
 
-/* Practice mode glow effect */
 .game-container.practice .cube-button:not(:disabled):not(.game-ended) .cube-face {
   animation: practiceGlow 2s ease-in-out infinite;
 }
 
-/* Hover and pressed states */
 @media (hover: hover) and (pointer: fine) {
   .cube-button:not(:disabled):not(.game-ended):hover {
     transform: scale(1.05);
   }
 }
 
-/* Touch-specific active state */
 @media (hover: none) {
   .cube-button:not(:disabled):not(.game-ended):active,
   .cube-button.pressed:not(:disabled):not(.game-ended) {
     transform: scale(0.95);
     transition: transform 0.1s ease-in-out;
   }
-}
 
-/* Default active state */
-.cube-button:not(:disabled):not(.game-ended):active,
-.cube-button.pressed:not(:disabled):not(.game-ended) {
-  transform: scale(0.95);
-  transition: transform 0.1s ease-in-out;
-}
-
-/* Remove hover effects on touch devices */
-@media (hover: none) {
   .cube-button:hover {
     transform: none;
   }
@@ -107,7 +92,12 @@
   }
 }
 
-/* Active state for touch */
+.cube-button:not(:disabled):not(.game-ended):active,
+.cube-button.pressed:not(:disabled):not(.game-ended) {
+  transform: scale(0.95);
+  transition: transform 0.1s ease-in-out;
+}
+
 .cube-button:not(:disabled):not(.game-ended):active,
 .cube-button.pressed:not(:disabled):not(.game-ended) {
   transform: scale(0.95) !important;
