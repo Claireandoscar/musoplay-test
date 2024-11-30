@@ -15,7 +15,8 @@ const GameBoard = ({
     gamePhase,
     correctSequence: renderBar?.correctSequence,
     completedBars: renderBar?.completedBars,
-    currentNoteIndex: renderBar?.currentNoteIndex
+    currentNoteIndex: renderBar?.currentNoteIndex,
+    failedBars: renderBar?.failedBars  // Add this line to debug
   });
 
   const renderBarComponent = (barNumber) => {
@@ -27,7 +28,8 @@ const GameBoard = ({
       sequence: renderBar?.correctSequence?.[barIndex],
       currentNoteIndex: isCurrentBar ? renderBar?.currentNoteIndex : 0,
       isComplete: renderBar?.completedBars?.[barIndex],
-      isFailing: isBarFailed && isCurrentBar
+      isFailing: isBarFailed && isCurrentBar,
+      hasFailed: renderBar?.failedBars?.[barIndex]  // Add this line to debug
     });
 
     return (
@@ -40,7 +42,7 @@ const GameBoard = ({
         isBarComplete={renderBar?.completedBars?.[barIndex] || false}
         isGameComplete={renderBar?.isGameComplete || false}
         isBarFailing={isBarFailed && isCurrentBar}
-        hasFailed={renderBar?.failedBars?.[barIndex] || false}
+        hasFailed={renderBar?.failedBars?.[barIndex]}  // Updated this line
         gamePhase={gamePhase}
       />
     );

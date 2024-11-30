@@ -153,7 +153,7 @@ body {
 /* Virtual instrument */
 .virtual-instrument {
   position: absolute;
-  top: 610px;
+  top: 580px;  /* We might need to adjust this lower */
   left: 60px;
   width: 270px;
   height: 130px;
@@ -161,6 +161,7 @@ body {
   grid-template-columns: repeat(4, 60px);
   grid-template-rows: repeat(2, 60px);
   gap: 10px;
+  z-index: 2; /* Add this to ensure it's above the progress bar */
 }
 
 /* Cube button styles */
@@ -173,14 +174,17 @@ body {
   transform: rotateX(-180deg);
 }
 
-/* Progress bar */
-.progress-bar {
+.progress-bar-container {
   position: absolute;
   bottom: 64px;
-  left: 60px;
-  width: 270px;
+  left: 15.38%;
+  width: 69.23%;
   height: 10px;
-  background-color: #ccc;
+  background-color: #fffdee;
+  border: 4px solid #00c22d;
+  border-radius: 5px;
+  overflow: hidden;
+  z-index: 1; /* Add this to ensure proper layering */
 }
 
 /* Note visibility */

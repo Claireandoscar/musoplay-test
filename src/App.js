@@ -16,7 +16,8 @@ const initialGameState = {
   gamePhase: 'initial',
   completedBars: [false, false, false, false],
   isBarFailing: false,
-  barHearts: [4, 4, 4, 4]
+  barHearts: [4, 4, 4, 4],
+  failedBars: [false, false, false, false]
 };
 
 function gameReducer(state, action) {
@@ -72,15 +73,24 @@ function gameReducer(state, action) {
                 isBarFailing: action.failing
             };
 
+        case 'SET_BAR_FAILED':
+            return {
+                ...state,
+                failedBars: state.failedBars.map((failed, index) => 
+                    index === action.barIndex ? action.failed : failed
+                )
+            };
+
         case 'RESET_GAME_STATE':
-              return {
-                  ...initialGameState,
-                  currentNoteIndex: 0,
-                  gamePhase: 'initial',
-                  completedBars: [false, false, false, false],
-                  isBarFailing: false,
-                  barHearts: [4, 4, 4, 4]
-              };   
+            return {
+                ...initialGameState,
+                currentNoteIndex: 0,
+                gamePhase: 'initial',
+                completedBars: [false, false, false, false],
+                isBarFailing: false,
+                barHearts: [4, 4, 4, 4],
+                failedBars: [false, false, false, false]
+            };   
             
         default:
             return state;
@@ -143,8 +153,8 @@ function App() {
   }, [audioFiles]);
 
   useEffect(() => {
-    const loadPianoNotes = async () => {
-        console.log('Loading piano notes...');
+    const loadAllSounds = async () => {
+        console.log('Loading all sounds...');
         try {
             // Make sure audio engine is initialized
             await audioEngine.init();
@@ -154,14 +164,21 @@ function App() {
                 await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
                 console.log(`Loaded note ${i}`);
             }
-            console.log('All piano notes loaded successfully');
+            
+            // Load all UI sounds
+            await audioEngine.loadSound('/assets/audio/ui-sounds/wrong-note.mp3', 'wrong');
+            await audioEngine.loadSound('/assets/audio/ui-sounds/bar-failed.mp3', 'fail');
+            await audioEngine.loadSound('/assets/audio/ui-sounds/bar-complete.mp3', 'complete');
+            await audioEngine.loadSound('/assets/audio/ui-sounds/note-flip.mp3', 'flip');
+            
+            console.log('All sounds loaded successfully');
         } catch (error) {
-            console.error('Failed to load piano notes:', error);
+            console.error('Failed to load sounds:', error);
         }
     };
 
-    loadPianoNotes();
-}, []); // Empty dependency array means this runs once when component mounts
+    loadAllSounds();
+}, []);
 
   // Audio initialization effect
   useEffect(() => {
@@ -508,44 +525,80 @@ const handleNotePlay = useCallback((noteNumber) => {
     const currentNote = currentSequence[gameState.currentNoteIndex];
     
     if (currentNote && noteNumber === currentNote.number) {
+      // Handle correct note
       const newNoteIndex = gameState.currentNoteIndex + 1;
       dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
 
+      // Check if bar is complete
       if (newNoteIndex === currentSequence.length) {
+        try {
+          audioEngine.playSound('complete');
+        } catch (error) {
+          console.error('Failed to play complete sound:', error);
+        }
+        
         const updatedScore = gameState.barHearts[currentBarIndex];
         setScore(prevScore => prevScore + updatedScore);
         moveToNextBar(true);
       }
     } else {
       // Handle wrong note
-      dispatch({ type: 'SET_BAR_FAILING', failing: true });
-      dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-      dispatch({ type: 'WRONG_NOTE', barIndex: currentBarIndex });
+      const handleBarFailure = async () => {
+        // Play wrong note sound
+        try {
+          audioEngine.playSound('wrong');
+        } catch (error) {
+          console.error('Failed to play wrong note sound:', error);
+        }
 
-      try {
-        audioEngine.playSound('wrong');
-      } catch (error) {
-        console.error('Failed to play wrong note sound:', error);
-      }
+        // Update game state for wrong note
+        dispatch({ type: 'SET_BAR_FAILING', failing: true });
+        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+        dispatch({ type: 'WRONG_NOTE', barIndex: currentBarIndex });
 
-      if (gameState.barHearts[currentBarIndex] <= 1) {
-        setTimeout(() => {
+        // Check if this was the last heart
+        if (gameState.barHearts[currentBarIndex] <= 1) {
+          // Add breaking animation to hearts
+          const heartElements = document.querySelectorAll('.life-indicator .heart');
+          heartElements.forEach(heart => {
+            heart.classList.add('breaking');
+          });
+
+          // Play fail sound after heart break animation starts
+          await new Promise(resolve => setTimeout(resolve, 300));
           try {
             audioEngine.playSound('fail');
           } catch (error) {
             console.error('Failed to play fail sound:', error);
           }
-        }, 300);
 
-        setTimeout(() => {
+          // Wait for animations to complete
+          await new Promise(resolve => setTimeout(resolve, 1200)); // 1500 - 300 = 1200
+
+          // Reset state and move to next bar
           dispatch({ type: 'SET_BAR_FAILING', failing: false });
+          dispatch({ 
+            type: 'SET_BAR_FAILED', 
+            barIndex: currentBarIndex, 
+            failed: true 
+          });
           moveToNextBar(false);
-        }, 1500);
-      } else {
-        setTimeout(() => {
-          dispatch({ type: 'SET_BAR_FAILING', failing: false });
-        }, 500);
-      }
+
+          // Cleanup animations
+          heartElements.forEach(heart => {
+            heart.classList.remove('breaking');
+          });
+        } else {
+          // For non-fatal wrong notes, just reset failing state after delay
+          setTimeout(() => {
+            dispatch({ type: 'SET_BAR_FAILING', failing: false });
+          }, 500);
+        }
+      };
+
+      handleBarFailure().catch(error => {
+        console.error('Error in handleBarFailure:', error);
+      });
     }
   }
 }, [
@@ -569,18 +622,18 @@ return (
                   setShowInstructions(true);
               }} />
               <GameBoard 
-                  barHearts={gameState.barHearts} 
-                  currentBarIndex={currentBarIndex}
-                  renderBar={{
-                      correctSequence,
-                      currentNoteIndex: gameState.currentNoteIndex,
-                      completedBars: gameState.completedBars,
-                      isGameComplete,
-                      failedBars
-                  }}
-                  isBarFailed={gameState.isBarFailing}
-                  gamePhase={gameState.gamePhase}
-              />
+    barHearts={gameState.barHearts} 
+    currentBarIndex={currentBarIndex}
+    renderBar={{
+        correctSequence,
+        currentNoteIndex: gameState.currentNoteIndex,
+        completedBars: gameState.completedBars,
+        isGameComplete,
+        failedBars: gameState.failedBars  // Make sure this is added
+    }}
+    isBarFailed={gameState.isBarFailing}
+    gamePhase={gameState.gamePhase}
+/>
               <Controls 
     onListenPractice={handleListenPractice}
     onPerform={handlePerform}

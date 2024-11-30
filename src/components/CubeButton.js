@@ -51,31 +51,56 @@ const CubeButton = ({
     buttonRef.current.hasPlayedNote = false;
   }, [noteNumber]);
 
-  // Add touch move handler to prevent scrolling
   const handleTouchMove = useCallback((e) => {
     console.log(`[CubeButton ${noteNumber}] Touch Move Event`);
     e.preventDefault();
   }, [noteNumber]);
 
+  // Add keyboard support
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      buttonRef.current.isPressed = true;
+      buttonRef.current.hasPlayedNote = false;
+      playNote();
+    }
+  }, [playNote]);
+
+  const handleKeyUp = useCallback((e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      buttonRef.current.isPressed = false;
+      buttonRef.current.hasPlayedNote = false;
+    }
+  }, []);
+
+  const handleClick = useCallback((e) => {
+    console.log(`[CubeButton ${noteNumber}] Click Event`);
+    e.preventDefault();
+    onNotePlay(noteNumber);  // This should be all we need - let handleNotePlay manage the game state
+  }, [noteNumber, onNotePlay]);
+
   const buttonClass = `cube-button ${color} ${isGameEnded ? 'game-ended' : ''} ${
     buttonRef.current.isPressed ? 'pressed' : ''
   }`;
 
-  console.log(`[CubeButton ${noteNumber}] Rendering with class:`, buttonClass);
-
   return (
-    <div 
+    <button 
+      type="button"
       className={buttonClass}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchMove}
-      role="button"
-      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onClick={handleClick} 
+      disabled={isGameEnded}
+      aria-label={`Play note ${noteNumber}`}
     >
       <div className="cube-face front">
         <img 
           src={frontImage} 
-          alt={`Note ${noteNumber} front`} 
+          alt=""  // Remove alt text since we have aria-label on button
           className="cube-image"
           draggable="false"
         />
@@ -83,12 +108,12 @@ const CubeButton = ({
       <div className="cube-face bottom">
         <img 
           src={bottomImage} 
-          alt={`Note ${noteNumber} bottom`} 
+          alt="" 
           className="cube-image"
           draggable="false"
         />
       </div>
-    </div>
+    </button>
   );
 };
 
