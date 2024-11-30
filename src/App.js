@@ -111,7 +111,6 @@ function App() {
   const [gameMode, setGameMode] = useState('initial');
   const [score, setScore] = useState(0);
   const [currentBarIndex, setCurrentBarIndex] = useState(0);
-  const [failedBars, setFailedBars] = useState([false, false, false, false]);
   const [currentGameNumber, setCurrentGameNumber] = useState(1);
   const [showInstructions, setShowInstructions] = useState(false);
   
@@ -277,6 +276,28 @@ function App() {
     setIsListenPracticeMode(true);
   }, [melodyAudio, dispatch, currentBarIndex]);
 
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!document.hidden && audioEngine?.audioContext?.state === 'suspended') {
+        try {
+          await audioEngine.init();
+          console.log('AudioEngine reinitialized for virtual piano');
+        } catch (error) {
+          console.error('Failed to reinitialize AudioEngine:', error);
+        }
+      }
+    };
+  
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Initial check in case page was loaded in background tab
+    handleVisibilityChange();
+  
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // ... rest of your component code
 
 // Updated perform mode handler
@@ -346,9 +367,35 @@ useEffect(() => {
 }, [audioFiles, dispatch]);
 
 useEffect(() => {
-    if (!fullTunePath) return;
-    const audio = new Audio(fullTunePath);
-    setFullTuneMelodyAudio(audio);
+  if (!fullTunePath) return;
+  
+  const audio = new Audio(fullTunePath);
+  
+  // Handle visibility change - handle both audio types
+  const handleVisibilityChange = async () => {
+    if (document.hidden) {
+      audio.pause();
+    } else {
+      // Page is visible again - ensure audioEngine is ready
+      if (audioEngine && audioEngine.audioContext?.state === 'suspended') {
+        try {
+          await audioEngine.init();
+          console.log('AudioEngine reinitialized after visibility change');
+        } catch (error) {
+          console.error('Failed to reinitialize AudioEngine:', error);
+        }
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  setFullTuneMelodyAudio(audio);
+
+  // Cleanup
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    audio.pause();
+  };
 }, [fullTunePath]);
 
 // Handle game start
@@ -368,7 +415,6 @@ const handleStartGame = () => {
     setIsGameEnded(false);
     setShowEndAnimation(false);
     setIsListenPracticeMode(false);
-    setFailedBars([false, false, false, false]);
 };
 
 // Cleanup effect for audio
@@ -473,7 +519,6 @@ const handleNextGame = () => {
   setAudioFiles([]);
   setScore(0);
   setCurrentBarIndex(0);
-  setFailedBars([false, false, false, false]);
   
   // Reset reducer state
   dispatch({ type: 'RESET_GAME_STATE' });
@@ -491,7 +536,6 @@ const handleNextGame = () => {
     // Reset gameplay states
     setScore(0);
     setCurrentBarIndex(0);
-    setFailedBars([false, false, false, false]);
     
     // Reset game modes
     setGameMode('initial');
@@ -507,12 +551,23 @@ const handleNextGame = () => {
   resetGameStates();
 };
 
-const handleNotePlay = useCallback((noteNumber) => {
+const handleNotePlay = useCallback(async (noteNumber) => {
   console.log('handleNotePlay called with note:', noteNumber);
 
   if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
     console.log('Note ignored - wrong game phase:', gameState.gamePhase);
     return;
+  }
+
+  // Check and resume audio context if needed
+  if (audioEngine?.audioContext?.state === 'suspended') {
+    try {
+      await audioEngine.init();
+      console.log('Audio context resumed for note play');
+    } catch (error) {
+      console.error('Failed to initialize audio engine:', error);
+      return;
+    }
   }
 
   // Play note using audio engine
@@ -522,6 +577,8 @@ const handleNotePlay = useCallback((noteNumber) => {
   } catch (error) {
     console.error('Failed to play note:', error);
   }
+
+  // Rest of your existing handleNotePlay code...
 
   if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
     const currentSequence = correctSequence[currentBarIndex];

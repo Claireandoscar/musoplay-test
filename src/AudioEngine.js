@@ -3,6 +3,73 @@ export class AudioEngine {
     this.audioContext = null;
     this.buffers = new Map();
     this.initialized = false;
+    this.activeSources = new Set();
+    this.setupVisibilityHandler();
+  }
+
+  setupVisibilityHandler() {
+    document.addEventListener('visibilitychange', async () => {
+      if (document.hidden) {
+        console.log('Page hidden - stopping all audio');
+        // Immediately stop all sources
+        this.activeSources.forEach(source => {
+          try {
+            source.stop(0);
+            source.disconnect();
+          } catch (e) {
+            console.log('Error stopping source:', e);
+          }
+        });
+        this.activeSources.clear();
+
+        // Suspend audio context
+        if (this.audioContext) {
+          this.audioContext.suspend().catch(e => console.log('Error suspending context:', e));
+        }
+      } else {
+        // Page is becoming visible again
+        console.log('Page visible - resuming audio context');
+        if (this.audioContext?.state === 'suspended') {
+          try {
+            await this.audioContext.resume();
+            this.initialized = true;
+            console.log('Audio context resumed successfully');
+          } catch (e) {
+            console.log('Error resuming audio context:', e);
+            // Try to reinitialize if resume fails
+            await this.init();
+          }
+        }
+      }
+    });
+
+    // Additional handlers for mobile
+    window.addEventListener('pagehide', () => {
+      this.stopAllSounds();
+    });
+
+    window.addEventListener('blur', () => {
+      this.stopAllSounds();
+    });
+  }
+
+  stopAllSounds() {
+    console.log('Stopping all sounds');
+    if (this.audioContext) {
+      // Stop all sources immediately
+      this.activeSources.forEach(source => {
+        try {
+          source.stop(0);
+          source.disconnect();
+        } catch (e) {
+          console.log('Error stopping source:', e);
+        }
+      });
+      this.activeSources.clear();
+      
+      // Suspend the audio context
+      this.audioContext.suspend().catch(e => console.log('Error suspending context:', e));
+    }
   }
 
   async init() {
@@ -13,14 +80,12 @@ export class AudioEngine {
         return;
       }
 
-      // Create AudioContext only if it doesn't exist
       if (!this.audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         this.audioContext = new AudioContext();
         console.log('AudioContext created:', this.audioContext.state);
       }
 
-      // Ensure audio context is resumed
       if (this.audioContext.state === 'suspended') {
         console.log('Attempting to resume suspended audio context...');
         await this.audioContext.resume();
@@ -39,7 +104,6 @@ export class AudioEngine {
 
   async loadSound(url, id) {
     try {
-      // Ensure AudioContext exists before loading sounds
       if (!this.audioContext) {
         await this.init();
       }
@@ -67,6 +131,11 @@ export class AudioEngine {
     }
 
     try {
+      if (document.hidden) {
+        console.log('Page is hidden, not playing sound');
+        return;
+      }
+
       const source = this.audioContext.createBufferSource();
       source.buffer = this.buffers.get(id);
       
@@ -78,6 +147,16 @@ export class AudioEngine {
 
       const startTime = this.audioContext.currentTime + time;
       source.start(startTime);
+      
+      // Add to active sources
+      this.activeSources.add(source);
+      
+      // Remove from active sources when done
+      source.onended = () => {
+        this.activeSources.delete(source);
+        source.disconnect();
+      };
+      
       console.log(`Sound ${id} started playing`);
       return source;
     } catch (error) {
@@ -88,6 +167,11 @@ export class AudioEngine {
   playNote(noteNumber) {
     console.log(`Playing note: ${noteNumber}`);
     return this.playSound(`n${noteNumber}`);
+  }
+
+  // Method to check if any sounds are currently playing
+  isPlaying() {
+    return this.activeSources.size > 0;
   }
 }
 
