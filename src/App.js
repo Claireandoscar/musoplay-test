@@ -190,7 +190,8 @@ function App() {
             const success = await audioEngine.init();
             console.log('AudioEngine init success:', success, 'Audio files:', audioFiles.length);
             
-            if (success && audioFiles.length > 0) {
+            // Change this condition to check if initialization didn't fail
+            if (success !== false && audioFiles.length > 0) {  // Modified this line
                 console.log('Loading audio for current bar:', currentBarIndex);
                 await loadAudio(currentBarIndex);
                 setIsAudioLoaded(true);
@@ -207,6 +208,8 @@ function App() {
             setIsAudioLoaded(false);
         }
     };
+
+    // Rest of the effect code...
 
     // Try to initialize immediately
     initAudio();
