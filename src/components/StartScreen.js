@@ -1,6 +1,5 @@
-import React, { useState } from 'react';  // Add this at the top
+import React, { useState } from 'react';
 import './StartScreen.css';
-
 
 const StartScreen = ({ onStartGame }) => {
   const [currentBlock, setCurrentBlock] = useState(0);
@@ -14,7 +13,8 @@ const StartScreen = ({ onStartGame }) => {
     "TODAY'S TEST VERSION HAS THREE CHALLENGES AT DIFFERENT DIFFICULTY LEVELS",
     "YOUR PREFERENCES WILL GUIDE MUSOPLAY'S FUTURE DEVELOPMENT",
     "PLEASE SHARE YOUR THOUGHTS IN A QUICK SURVEY AFTER"
- ];
+  ];
+
   const handleNext = () => {
     setIsFlipping(true);
     setTimeout(() => {
@@ -65,10 +65,8 @@ const StartScreen = ({ onStartGame }) => {
         </div>
       )}
 
-      {/* Instructions popup remains the same */}
-
       {showInstructions && (
-        <div className="instructions-popup">
+        <div className="instructions-popup" onClick={handleCloseInstructions}>
           <button className="close-button" onClick={handleCloseInstructions}>
             ×
           </button>
