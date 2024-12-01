@@ -230,66 +230,69 @@ function App() {
 }, []);
 
   // Audio initialization effect
-useEffect(() => {
-  console.log('Audio initialization effect running');
-  
-  const initAudio = async () => {
-      console.log('Initializing audio engine from App.js');
-      try {
-          // First, handle user interaction requirement
-          const hasInteracted = await new Promise(resolve => {
-              const handleInteraction = () => {
-                  document.removeEventListener('touchstart', handleInteraction);
-                  document.removeEventListener('mousedown', handleInteraction);
-                  resolve(true);
-              };
-              
-              document.addEventListener('touchstart', handleInteraction, { passive: false });
-              document.addEventListener('mousedown', handleInteraction);
-              
-              // If we already have interaction, resolve immediately
-              if (document.documentElement.dataset.hasInteracted === 'true') {
-                  resolve(true);
-              }
-          });
+  useEffect(() => {
+    console.log('Audio initialization effect running');
+    console.log('User Agent:', navigator.userAgent);
+    console.log('Initial audio loaded state:', isAudioLoaded);
+    
+    const initAudio = async () => {
+        console.log('Initializing audio engine from App.js');
+        try {
+            // First, handle user interaction requirement
+            const hasInteracted = await new Promise(resolve => {
+                const handleInteraction = () => {
+                    console.log('User interaction detected');
+                    document.removeEventListener('touchstart', handleInteraction);
+                    document.removeEventListener('mousedown', handleInteraction);
+                    resolve(true);
+                };
+                
+                document.addEventListener('touchstart', handleInteraction, { passive: false });
+                document.addEventListener('mousedown', handleInteraction);
+                
+                if (document.documentElement.dataset.hasInteracted === 'true') {
+                    console.log('Previous interaction detected');
+                    resolve(true);
+                }
+            });
 
-          if (!hasInteracted) {
-              console.log('Waiting for user interaction before initializing audio');
-              return;
-          }
+            if (!hasInteracted) {
+                console.log('No user interaction yet');
+                return;
+            }
 
-          document.documentElement.dataset.hasInteracted = 'true';
-          
-          // Now try to initialize audio engine
-          const success = await audioEngine.init();
-          console.log('AudioEngine init success:', success, 'Audio files:', audioFiles.length);
-          
-          if (success && audioFiles.length > 0) {
-              console.log('Loading audio for current bar:', currentBarIndex);
-              await loadAudio(currentBarIndex);
-              setIsAudioLoaded(true);
-              dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
-              console.log('Audio initialization complete');
-          } else {
-              console.log('Audio initialization conditions not met:', { 
-                  success, 
-                  hasAudioFiles: audioFiles.length > 0 
-              });
-          }
-      } catch (error) {
-          console.error('Failed to initialize audio:', error);
-          setIsAudioLoaded(false);
-      }
-  };
+            // Check audioFiles availability
+            console.log('Audio files available:', audioFiles.length);
+            console.log('Current bar index:', currentBarIndex);
+            
+            const success = await audioEngine.init();
+            console.log('Audio initialization result:', success);
+            
+            if (success && audioFiles.length > 0) {
+                const audioLoadResult = await loadAudio(currentBarIndex);
+                console.log('Audio load result:', audioLoadResult);
+                setIsAudioLoaded(true);
+                console.log('isAudioLoaded set to true');
+                dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
+            } else {
+                console.log('Audio initialization conditions not met:', {
+                    success,
+                    hasAudioFiles: audioFiles.length > 0
+                });
+            }
+        } catch (error) {
+            console.error('Audio initialization error:', error);
+            setIsAudioLoaded(false);
+        }
+    };
 
-  // Try to initialize immediately
-  initAudio();
-
-  // Cleanup function
-  return () => {
-      console.log('Cleaning up audio initialization effect');
-  };
-}, [audioFiles, currentBarIndex, loadAudio, dispatch]);
+    initAudio();
+    
+    // Cleanup function
+    return () => {
+        console.log('Cleaning up audio initialization effect');
+    };
+}, [audioFiles, currentBarIndex, loadAudio, dispatch, isAudioLoaded]);
   // Fetch audio files effect
   useEffect(() => {
     const fetchAudioFiles = async () => {
