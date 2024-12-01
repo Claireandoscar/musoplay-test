@@ -885,11 +885,11 @@ return (
     isBarFailed={gameState.isBarFailing}
     gamePhase={gameState.gamePhase}
 />
-              <Controls 
+<Controls 
     onListenPractice={handleListenPractice}
     onPerform={handlePerform}
     isListenPracticeMode={isListenPracticeMode}
-    isPerformAvailable={isAudioLoaded}
+    isPerformAvailable={isAudioLoaded}  // This controls button availability
     isAudioLoaded={isAudioLoaded}
     gamePhase={gameState.gamePhase}
 />

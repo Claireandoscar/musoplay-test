@@ -99,40 +99,14 @@ export class AudioEngine {
         // Create context if it doesn't exist
         if (!this.audioContext) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            
-            // Check if running on iOS
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            
-            if (isIOS) {
-                // iOS-specific options
-                this.audioContext = new AudioContext();
-            } else {
-                // Android and other platforms
-                this.audioContext = new AudioContext({
-                    latencyHint: 'interactive',
-                    sampleRate: 44100
-                });
-            }
+            this.audioContext = new AudioContext();
             console.log('AudioContext created:', this.audioContext.state);
         }
 
-        // Force resume context - iOS specific handling
+        // Resume context if needed
         if (this.audioContext.state !== 'running') {
             console.log('Attempting to resume suspended audio context...');
-            // iOS requires user interaction
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) {
-                // On iOS, we need to be more aggressive about resuming
-                await this.audioContext.resume();
-            } else {
-                // For other platforms, check gesture
-                if (!this._hasUserGesture) {
-                    console.log('Waiting for user gesture before resuming audio...');
-                    return false;
-                }
-                await this.audioContext.resume();
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
+            await this.audioContext.resume();
             console.log('Audio context resumed:', this.audioContext.state);
         }
 
@@ -179,27 +153,16 @@ export class AudioEngine {
             return;
         }
 
-        // Check if running on iOS
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-        // Check audio context state
-        if (this.audioContext.state !== 'running') {
-            console.log('Audio context not running, attempting to resume...');
-            this.audioContext.resume();
-        }
-
         const source = this.audioContext.createBufferSource();
         source.buffer = this.buffers.get(id);
         
         const gainNode = this.audioContext.createGain();
-        // Different gain values for iOS vs Android
-        gainNode.gain.value = isIOS ? 1.0 : 0.9;
+        gainNode.gain.value = 1.0;
 
         source.connect(gainNode);
         gainNode.connect(this.audioContext.destination);
 
-        // Different timing approach for iOS
-        const startTime = this.audioContext.currentTime + (isIOS ? 0 : (time || 0.01));
+        const startTime = this.audioContext.currentTime + time;
         source.start(startTime);
         
         this.activeSources.add(source);
@@ -209,24 +172,10 @@ export class AudioEngine {
             source.disconnect();
             gainNode.disconnect();
         };
-
-        // iOS specific error checking
-        if (isIOS && this.audioContext.state !== 'running') {
-            console.log('iOS audio context not running after play attempt');
-            this.audioContext.resume().catch(e => console.log('Error resuming iOS context:', e));
-        }
         
         return source;
     } catch (error) {
         console.error(`Error playing sound ${id}:`, error);
-        // Attempt recovery on iOS
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
-            try {
-                this.audioContext.resume();
-            } catch (e) {
-                console.error('iOS recovery attempt failed:', e);
-            }
-        }
     }
 }
   async recoverAudio() {
