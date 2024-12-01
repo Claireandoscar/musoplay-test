@@ -134,70 +134,35 @@ function App() {
 
   // Define loadAudio callback - combined version
   const loadAudio = useCallback(async (barIndex) => {
-    console.log(`Attempting to load audio for bar ${barIndex}`);
+    console.log('LoadAudio called with barIndex:', barIndex);
+    console.log('Current audioFiles:', audioFiles);
     
     if (audioFiles.length === 0 || barIndex >= audioFiles.length) {
         console.log('No audio files available or invalid bar index');
+        setIsAudioLoaded(false);  // Explicitly set to false
         return;
     }
 
-    const audioPath = audioFiles[barIndex];
-    const retryAttempts = 3; // Number of retry attempts
-
-    for (let attempt = 0; attempt < retryAttempts; attempt++) {
-        try {
-            // Ensure audio context is running
-            if (audioEngine?.audioContext?.state !== 'running') {
-                await audioEngine.init();
-                // Small delay for Android
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-
-            // Load the melody into the AudioEngine first
-            console.log(`Loading sound into AudioEngine: melody${barIndex}`);
-            await audioEngine.loadSound(audioPath, `melody${barIndex}`);
-
-            // Create and pre-load Audio object
-            console.log('Creating Audio object');
-            const audio = new Audio();
-            
-            // Set up error handling before setting src
-            const loadPromise = new Promise((resolve, reject) => {
-                audio.addEventListener('canplaythrough', () => resolve(), { once: true });
-                audio.addEventListener('error', (e) => reject(e), { once: true });
-            });
-
-            // Set audio properties
-            audio.src = audioPath;
-            audio.preload = 'auto';
-
-            // Wait for audio to be ready
-            await loadPromise;
-
-            console.log(`Audio loaded successfully for bar ${barIndex}`);
-            setMelodyAudio(audio);
-            return audio;
-
-        } catch (error) {
-            console.error(`Attempt ${attempt + 1} failed to load audio:`, error);
-            
-            if (attempt === retryAttempts - 1) {
-                console.error('All attempts to load audio failed');
-                // On final attempt, try fallback approach
-                try {
-                    console.log('Attempting fallback audio loading');
-                    const fallbackAudio = new Audio(audioPath);
-                    setMelodyAudio(fallbackAudio);
-                    return fallbackAudio;
-                } catch (fallbackError) {
-                    console.error('Fallback audio loading failed:', fallbackError);
-                    throw new Error('Failed to load audio after all attempts');
-                }
-            }
-            
-            // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+    try {
+        const audioPath = audioFiles[barIndex];
+        console.log('Loading audio from path:', audioPath);
+        
+        // Load into AudioEngine
+        await audioEngine.loadSound(audioPath, `melody${barIndex}`);
+        
+        // Create Audio object
+        const audio = new Audio(audioPath);
+        setMelodyAudio(audio);
+        
+        // Explicitly set audio loaded to true
+        setIsAudioLoaded(true);
+        console.log('Audio successfully loaded, isAudioLoaded set to true');
+        
+        return audio;
+    } catch (error) {
+        console.error('Failed to load audio:', error);
+        setIsAudioLoaded(false);
+        return null;
     }
 }, [audioFiles]);
 
@@ -316,21 +281,25 @@ function App() {
   // Fetch audio files effect
   useEffect(() => {
     const fetchAudioFiles = async () => {
-      try {
-        const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
-        console.log('Attempting to fetch JSON from:', jsonPath);
-        const response = await fetch(jsonPath);
-        const data = await response.json();
-        console.log('Loaded audio files:', data);
-        setAudioFiles(data.melodyParts);
-        setFullTunePath(data.fullTune);
-      } catch (error) {
-        console.error('Failed to load current.json:', error);
-      }
+        try {
+            const jsonPath = `/assets/audio/testMelodies/game${currentGameNumber}/current.json`;
+            console.log('Fetching JSON from:', jsonPath);
+            const response = await fetch(jsonPath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('Successfully loaded audio files:', data);
+            setAudioFiles(data.melodyParts);
+            setFullTunePath(data.fullTune);
+            console.log('Audio files state updated');
+        } catch (error) {
+            console.error('Failed to load current.json:', error);
+        }
     };
 
     fetchAudioFiles();
-  }, [currentGameNumber]);
+}, [currentGameNumber]);
   
   // Keep this useEffect for loading melodies when bar changes
   useEffect(() => {
@@ -889,9 +858,16 @@ return (
     onListenPractice={handleListenPractice}
     onPerform={handlePerform}
     isListenPracticeMode={isListenPracticeMode}
-    isPerformAvailable={isAudioLoaded}  // This controls button availability
+    isPerformAvailable={isAudioLoaded}
     isAudioLoaded={isAudioLoaded}
     gamePhase={gameState.gamePhase}
+    // Add this to verify props
+    ref={ref => console.log('Controls props:', {
+        isListenPracticeMode,
+        isPerformAvailable: isAudioLoaded,
+        isAudioLoaded,
+        gamePhase: gameState.gamePhase
+    })}
 />
               <VirtualInstrument 
                   notes={notes}
