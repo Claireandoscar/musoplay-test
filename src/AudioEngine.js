@@ -4,7 +4,6 @@ export class AudioEngine {
     this.buffers = new Map();
     this.initialized = false;
     this.activeSources = new Set();
-    this.loadingPromises = new Map();
     this.setupVisibilityHandler();
   }
 
@@ -78,7 +77,7 @@ export class AudioEngine {
     try {
       if (this.initialized) {
         console.log('AudioEngine already initialized');
-        return true;
+        return;
       }
 
       if (!this.audioContext) {
@@ -103,68 +102,10 @@ export class AudioEngine {
     }
   }
 
-  async preloadSounds(urls) {
-    if (!this.initialized) {
-      await this.init();
-    }
-
-    const results = {
-      loaded: [],
-      failed: []
-    };
-
-    try {
-      const loadPromises = urls.map(async ({ url, id }) => {
-        try {
-          // Check if already loaded
-          if (this.buffers.has(id)) {
-            results.loaded.push(id);
-            return;
-          }
-
-          // Check if already loading
-          if (this.loadingPromises.has(id)) {
-            await this.loadingPromises.get(id);
-            results.loaded.push(id);
-            return;
-          }
-
-          // Create new loading promise
-          const loadPromise = this.loadSound(url, id);
-          this.loadingPromises.set(id, loadPromise);
-
-          await loadPromise;
-          results.loaded.push(id);
-        } catch (error) {
-          console.error(`Failed to preload sound ${id}:`, error);
-          results.failed.push(id);
-        } finally {
-          this.loadingPromises.delete(id);
-        }
-      });
-
-      await Promise.all(loadPromises);
-      return results;
-    } catch (error) {
-      console.error('Error in preloadSounds:', error);
-      throw error;
-    }
-  }
-
   async loadSound(url, id) {
     try {
       if (!this.audioContext) {
         await this.init();
-      }
-
-      // Return existing buffer if already loaded
-      if (this.buffers.has(id)) {
-        return this.buffers.get(id);
-      }
-
-      // Return existing promise if already loading
-      if (this.loadingPromises.has(id)) {
-        return this.loadingPromises.get(id);
       }
 
       console.log(`Loading sound: ${id} from ${url}`);
@@ -228,6 +169,7 @@ export class AudioEngine {
     return this.playSound(`n${noteNumber}`);
   }
 
+  // Method to check if any sounds are currently playing
   isPlaying() {
     return this.activeSources.size > 0;
   }

@@ -151,36 +151,35 @@ function App() {
     }
   }, [audioFiles]);
 
-  const preloadAllSounds = async () => {
-    const soundsToLoad = [
-      // Piano notes
-      ...Array.from({ length: 8 }, (_, i) => ({
-        url: `/assets/audio/n${i + 1}.mp3`,
-        id: `n${i + 1}`
-      })),
-      // UI sounds
-      { url: '/assets/audio/ui-sounds/wrong-note.mp3', id: 'wrong' },
-      { url: '/assets/audio/ui-sounds/bar-failed.mp3', id: 'fail' },
-      { url: '/assets/audio/ui-sounds/bar-complete.mp3', id: 'complete' },
-      { url: '/assets/audio/ui-sounds/note-flip.mp3', id: 'flip' },
-      // Add your melody files here when available
-      ...audioFiles.map((file, index) => ({
-        url: file,
-        id: `melody${index}`
-      }))
-    ];
-    
-    try {
-      const results = await audioEngine.preloadSounds(soundsToLoad);
-      console.log('Preload results:', results);
-      setIsAudioLoaded(true);
-      dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
-    } catch (error) {
-      console.error('Failed to preload sounds:', error);
-      setIsAudioLoaded(false);
-    }
-  };
+  useEffect(() => {
+    const loadAllSounds = async () => {
+        console.log('Loading all sounds...');
+        try {
+            // Make sure audio engine is initialized
+            await audioEngine.init();
+            
+            // Load all piano notes (1-8)
+            for (let i = 1; i <= 8; i++) {
+                await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
+                console.log(`Loaded note ${i}`);
+            }
+            
+            // Load all UI sounds
+            await audioEngine.loadSound('/assets/audio/ui-sounds/wrong-note.mp3', 'wrong');
+            await audioEngine.loadSound('/assets/audio/ui-sounds/bar-failed.mp3', 'fail');
+            await audioEngine.loadSound('/assets/audio/ui-sounds/bar-complete.mp3', 'complete');
+            await audioEngine.loadSound('/assets/audio/ui-sounds/note-flip.mp3', 'flip');
+            
+            console.log('All sounds loaded successfully');
+        } catch (error) {
+            console.error('Failed to load sounds:', error);
+        }
+    };
 
+    loadAllSounds();
+}, []);
+
+  // Audio initialization effect
   useEffect(() => {
     console.log('Audio initialization effect running');
     
@@ -188,13 +187,20 @@ function App() {
         console.log('Initializing audio engine from App.js');
         try {
             const success = await audioEngine.init();
-            console.log('AudioEngine init success:', success);
+            console.log('AudioEngine init success:', success, 'Audio files:', audioFiles.length);
             
-            if (success !== false) {
-                await preloadAllSounds();  // This handles all sound loading now
-                console.log('Audio initialization complete');
+            // Change this condition to check if initialization didn't fail
+            if (success !== false && audioFiles.length > 0) {  // Modified this line
+                console.log('Loading audio for current bar:', currentBarIndex);
+                await loadAudio(currentBarIndex);
+                setIsAudioLoaded(true);
+                dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
+                console.log('Audio initialization complete, isAudioLoaded set to true, game phase set to ready');
             } else {
-                console.log('Failed to initialize audio engine');
+                console.log('Failed conditions:', { 
+                    success, 
+                    hasAudioFiles: audioFiles.length > 0 
+                });
             }
         } catch (error) {
             console.error('Failed to initialize audio:', error);
@@ -202,26 +208,31 @@ function App() {
         }
     };
 
+    // Rest of the effect code...
+
     // Try to initialize immediately
     initAudio();
 
     const handleInteraction = async () => {
         console.log('Touch/click interaction detected');
         await initAudio();
+        // Only remove listeners after successful initialization
         document.removeEventListener('touchstart', handleInteraction);
         document.removeEventListener('mousedown', handleInteraction);
     };
 
+    // Set up interaction listeners
     document.addEventListener('touchstart', handleInteraction, { passive: false });
     document.addEventListener('mousedown', handleInteraction);
 
+    // Cleanup function
     return () => {
         console.log('Cleaning up audio initialization effect');
         document.removeEventListener('touchstart', handleInteraction);
         document.removeEventListener('mousedown', handleInteraction);
     };
-}, [audioFiles]);  // Note: Dependencies will be needed if you use any state variables in preloadAllSounds
-
+}, [audioFiles, currentBarIndex, loadAudio, dispatch]);
+  
 
   // Fetch audio files effect
   useEffect(() => {
@@ -241,7 +252,6 @@ function App() {
 
     fetchAudioFiles();
   }, [currentGameNumber]);
-
   
   // Keep this useEffect for loading melodies when bar changes
   useEffect(() => {
