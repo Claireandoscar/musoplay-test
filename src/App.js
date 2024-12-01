@@ -134,22 +134,72 @@ function App() {
 
   // Define loadAudio callback - combined version
   const loadAudio = useCallback(async (barIndex) => {
+    console.log(`Attempting to load audio for bar ${barIndex}`);
+    
     if (audioFiles.length === 0 || barIndex >= audioFiles.length) {
-      return;
+        console.log('No audio files available or invalid bar index');
+        return;
     }
 
     const audioPath = audioFiles[barIndex];
-    try {
-      // Load the melody into the AudioEngine
-      await audioEngine.loadSound(audioPath, `melody${barIndex}`);
-      // Create an Audio object for compatibility with existing code
-      const audio = new Audio(audioPath);
-      setMelodyAudio(audio);
-      return audio;
-    } catch (error) {
-      console.error("Failed to load melody audio:", error);
+    const retryAttempts = 3; // Number of retry attempts
+
+    for (let attempt = 0; attempt < retryAttempts; attempt++) {
+        try {
+            // Ensure audio context is running
+            if (audioEngine?.audioContext?.state !== 'running') {
+                await audioEngine.init();
+                // Small delay for Android
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            // Load the melody into the AudioEngine first
+            console.log(`Loading sound into AudioEngine: melody${barIndex}`);
+            await audioEngine.loadSound(audioPath, `melody${barIndex}`);
+
+            // Create and pre-load Audio object
+            console.log('Creating Audio object');
+            const audio = new Audio();
+            
+            // Set up error handling before setting src
+            const loadPromise = new Promise((resolve, reject) => {
+                audio.addEventListener('canplaythrough', () => resolve(), { once: true });
+                audio.addEventListener('error', (e) => reject(e), { once: true });
+            });
+
+            // Set audio properties
+            audio.src = audioPath;
+            audio.preload = 'auto';
+
+            // Wait for audio to be ready
+            await loadPromise;
+
+            console.log(`Audio loaded successfully for bar ${barIndex}`);
+            setMelodyAudio(audio);
+            return audio;
+
+        } catch (error) {
+            console.error(`Attempt ${attempt + 1} failed to load audio:`, error);
+            
+            if (attempt === retryAttempts - 1) {
+                console.error('All attempts to load audio failed');
+                // On final attempt, try fallback approach
+                try {
+                    console.log('Attempting fallback audio loading');
+                    const fallbackAudio = new Audio(audioPath);
+                    setMelodyAudio(fallbackAudio);
+                    return fallbackAudio;
+                } catch (fallbackError) {
+                    console.error('Fallback audio loading failed:', fallbackError);
+                    throw new Error('Failed to load audio after all attempts');
+                }
+            }
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
     }
-  }, [audioFiles]);
+}, [audioFiles]);
 
   useEffect(() => {
     const loadAllSounds = async () => {
@@ -180,60 +230,66 @@ function App() {
 }, []);
 
   // Audio initialization effect
-  useEffect(() => {
-    console.log('Audio initialization effect running');
-    
-    const initAudio = async () => {
-        console.log('Initializing audio engine from App.js');
-        try {
-            const success = await audioEngine.init();
-            console.log('AudioEngine init success:', success, 'Audio files:', audioFiles.length);
-            
-            // Change this condition to check if initialization didn't fail
-            if (success !== false && audioFiles.length > 0) {  // Modified this line
-                console.log('Loading audio for current bar:', currentBarIndex);
-                await loadAudio(currentBarIndex);
-                setIsAudioLoaded(true);
-                dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
-                console.log('Audio initialization complete, isAudioLoaded set to true, game phase set to ready');
-            } else {
-                console.log('Failed conditions:', { 
-                    success, 
-                    hasAudioFiles: audioFiles.length > 0 
-                });
-            }
-        } catch (error) {
-            console.error('Failed to initialize audio:', error);
-            setIsAudioLoaded(false);
-        }
-    };
-
-    // Rest of the effect code...
-
-    // Try to initialize immediately
-    initAudio();
-
-    const handleInteraction = async () => {
-        console.log('Touch/click interaction detected');
-        await initAudio();
-        // Only remove listeners after successful initialization
-        document.removeEventListener('touchstart', handleInteraction);
-        document.removeEventListener('mousedown', handleInteraction);
-    };
-
-    // Set up interaction listeners
-    document.addEventListener('touchstart', handleInteraction, { passive: false });
-    document.addEventListener('mousedown', handleInteraction);
-
-    // Cleanup function
-    return () => {
-        console.log('Cleaning up audio initialization effect');
-        document.removeEventListener('touchstart', handleInteraction);
-        document.removeEventListener('mousedown', handleInteraction);
-    };
-}, [audioFiles, currentBarIndex, loadAudio, dispatch]);
+useEffect(() => {
+  console.log('Audio initialization effect running');
   
+  const initAudio = async () => {
+      console.log('Initializing audio engine from App.js');
+      try {
+          // First, handle user interaction requirement
+          const hasInteracted = await new Promise(resolve => {
+              const handleInteraction = () => {
+                  document.removeEventListener('touchstart', handleInteraction);
+                  document.removeEventListener('mousedown', handleInteraction);
+                  resolve(true);
+              };
+              
+              document.addEventListener('touchstart', handleInteraction, { passive: false });
+              document.addEventListener('mousedown', handleInteraction);
+              
+              // If we already have interaction, resolve immediately
+              if (document.documentElement.dataset.hasInteracted === 'true') {
+                  resolve(true);
+              }
+          });
 
+          if (!hasInteracted) {
+              console.log('Waiting for user interaction before initializing audio');
+              return;
+          }
+
+          document.documentElement.dataset.hasInteracted = 'true';
+          
+          // Now try to initialize audio engine
+          const success = await audioEngine.init();
+          console.log('AudioEngine init success:', success, 'Audio files:', audioFiles.length);
+          
+          if (success && audioFiles.length > 0) {
+              console.log('Loading audio for current bar:', currentBarIndex);
+              await loadAudio(currentBarIndex);
+              setIsAudioLoaded(true);
+              dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
+              console.log('Audio initialization complete');
+          } else {
+              console.log('Audio initialization conditions not met:', { 
+                  success, 
+                  hasAudioFiles: audioFiles.length > 0 
+              });
+          }
+      } catch (error) {
+          console.error('Failed to initialize audio:', error);
+          setIsAudioLoaded(false);
+      }
+  };
+
+  // Try to initialize immediately
+  initAudio();
+
+  // Cleanup function
+  return () => {
+      console.log('Cleaning up audio initialization effect');
+  };
+}, [audioFiles, currentBarIndex, loadAudio, dispatch]);
   // Fetch audio files effect
   useEffect(() => {
     const fetchAudioFiles = async () => {
@@ -261,20 +317,79 @@ function App() {
   }, [currentBarIndex, correctSequence, loadAudio]);
 
   // Updated practice mode handler
-  const handleListenPractice = useCallback(() => {
-    if (melodyAudio) {
-      // Keep the existing Audio API for melody playback
-      melodyAudio.currentTime = 0;
-      melodyAudio.play().catch(error => console.error("Audio playback failed:", error));
-      
-      // Load into AudioEngine for better performance if needed
-      audioEngine.loadSound(melodyAudio.src, `practice-melody-${currentBarIndex}`);
+  const handleListenPractice = useCallback(async () => {
+    console.log('Listen & Practice button clicked');
+    console.log('Current audio states:', {
+      audioEngineState: audioEngine?.audioContext?.state,
+      melodyAudioState: melodyAudio?.readyState,
+      isAudioLoaded: isAudioLoaded,
+      gamePhase: gameState.gamePhase
+    });
+  
+    try {
+      // First ensure audio context is ready
+      if (audioEngine?.audioContext?.state !== 'running') {
+        console.log('Audio context not running, attempting to initialize...');
+        await audioEngine.init();
+        // Small delay for Android
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+  
+      if (melodyAudio) {
+        // Reset audio state
+        melodyAudio.currentTime = 0;
+        
+        // Try to play with retry mechanism
+        try {
+          console.log('Attempting to play melody audio...');
+          await melodyAudio.play();
+        } catch (error) {
+          console.error("Initial melody playback failed:", error);
+          // Retry after reinitializing audio
+          try {
+            console.log('Retrying audio playback...');
+            await audioEngine.init();
+            await melodyAudio.play();
+          } catch (retryError) {
+            console.error("Retry melody playback failed:", retryError);
+            // Try AudioEngine as backup
+            try {
+              console.log('Attempting backup playback through AudioEngine...');
+              await audioEngine.loadSound(melodyAudio.src, `practice-melody-${currentBarIndex}`);
+              await audioEngine.playSound(`practice-melody-${currentBarIndex}`);
+            } catch (finalError) {
+              console.error("All playback attempts failed:", finalError);
+            }
+          }
+        }
+      } else {
+        console.log('No melody audio available');
+      }
+  
+      console.log('Updating game state...');
+      dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
+      setGameMode('practice');
+      setIsListenPracticeMode(true);
+      console.log('Game state updated to practice mode');
+  
+    } catch (error) {
+      console.error("Error in handleListenPractice:", error);
+    } finally {
+      console.log('Final state:', {
+        gamePhase: gameState.gamePhase,
+        isListenPracticeMode: isListenPracticeMode,
+        gameMode: gameMode
+      });
     }
-
-    dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
-    setGameMode('practice');
-    setIsListenPracticeMode(true);
-  }, [melodyAudio, dispatch, currentBarIndex]);
+  }, [
+    melodyAudio, 
+    dispatch, 
+    currentBarIndex, 
+    gameState.gamePhase, 
+    isListenPracticeMode, 
+    gameMode,
+    isAudioLoaded // Added this dependency
+  ]); // Removed audioEngine from dependencies
 
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -301,20 +416,51 @@ function App() {
   // ... rest of your component code
 
 // Updated perform mode handler
-const handlePerform = useCallback(() => {
-    if (gameState.gamePhase === 'perform') {
-        if (melodyAudio) {
-            // Keep the existing Audio API for melody playback
-            melodyAudio.currentTime = 0;
-            melodyAudio.play().catch(error => console.error("Audio playback failed:", error));
-        }
-    } else {
-        dispatch({ type: 'SET_GAME_PHASE', payload: 'perform' });
-        setGameMode('play');
-        setIsListenPracticeMode(false);
-        dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-    }
-}, [gameState.gamePhase, melodyAudio, dispatch]);
+const handlePerform = useCallback(async () => {
+  if (gameState.gamePhase === 'perform') {
+      if (melodyAudio) {
+          // First ensure audio context is ready
+          try {
+              if (audioEngine?.audioContext?.state !== 'running') {
+                  await audioEngine.init();
+                  // Small delay for Android
+                  await new Promise(resolve => setTimeout(resolve, 50));
+              }
+
+              // Reset audio state
+              melodyAudio.currentTime = 0;
+              
+              // Try to play with retry mechanism
+              try {
+                  await melodyAudio.play();
+              } catch (error) {
+                  console.error("Initial melody playback failed:", error);
+                  // Retry after reinitializing audio
+                  try {
+                      await audioEngine.init();
+                      await melodyAudio.play();
+                  } catch (retryError) {
+                      console.error("Retry melody playback failed:", retryError);
+                      // Try AudioEngine as last resort
+                      try {
+                          await audioEngine.loadSound(melodyAudio.src, `perform-melody-${currentBarIndex}`);
+                          await audioEngine.playSound(`perform-melody-${currentBarIndex}`);
+                      } catch (finalError) {
+                          console.error("All playback attempts failed:", finalError);
+                      }
+                  }
+              }
+          } catch (error) {
+              console.error("Error in perform mode playback:", error);
+          }
+      }
+  } else {
+      dispatch({ type: 'SET_GAME_PHASE', payload: 'perform' });
+      setGameMode('play');
+      setIsListenPracticeMode(false);
+      dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+  }
+}, [gameState.gamePhase, melodyAudio, dispatch, currentBarIndex]); // Removed audioEngine from dependencies
 
 // Handle viewport height
 useEffect(() => {
@@ -559,27 +705,37 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     return;
   }
 
-  // Check and resume audio context if needed
-  if (audioEngine?.audioContext?.state === 'suspended') {
+  // Try to recover audio context if needed
+  if (audioEngine?.audioContext?.state !== 'running') {
     try {
       await audioEngine.init();
-      console.log('Audio context resumed for note play');
+      // Add a small delay after resuming context (helps on Android)
+      await new Promise(resolve => setTimeout(resolve, 50));
     } catch (error) {
       console.error('Failed to initialize audio engine:', error);
       return;
     }
   }
 
-  // Play note using audio engine
+  // Play note with error handling
   try {
-    console.log('Attempting to play note:', noteNumber);
-    audioEngine.playSound(`n${noteNumber}`);
+    console.log('Playing note:', noteNumber);
+    const source = audioEngine.playSound(`n${noteNumber}`);
+    if (!source) {
+      throw new Error('No audio source created');
+    }
   } catch (error) {
     console.error('Failed to play note:', error);
+    // Try to recover
+    try {
+      await audioEngine.init();
+      audioEngine.playSound(`n${noteNumber}`);
+    } catch (retryError) {
+      console.error('Retry failed:', retryError);
+    }
   }
 
-  // Rest of your existing handleNotePlay code...
-
+  // Game logic for perform mode
   if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
     const currentSequence = correctSequence[currentBarIndex];
     const currentNote = currentSequence[gameState.currentNoteIndex];
@@ -604,11 +760,17 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     } else {
       // Handle wrong note
       const handleBarFailure = async () => {
-        // Play wrong note sound
+        // Play wrong note sound with retry logic
         try {
-          audioEngine.playSound('wrong');
+          await audioEngine.playSound('wrong');
         } catch (error) {
           console.error('Failed to play wrong note sound:', error);
+          try {
+            await audioEngine.init();
+            await audioEngine.playSound('wrong');
+          } catch (retryError) {
+            console.error('Retry to play wrong sound failed:', retryError);
+          }
         }
 
         // Update game state for wrong note
@@ -627,13 +789,19 @@ const handleNotePlay = useCallback(async (noteNumber) => {
           // Play fail sound after heart break animation starts
           await new Promise(resolve => setTimeout(resolve, 300));
           try {
-            audioEngine.playSound('fail');
+            await audioEngine.playSound('fail');
           } catch (error) {
             console.error('Failed to play fail sound:', error);
+            try {
+              await audioEngine.init();
+              await audioEngine.playSound('fail');
+            } catch (retryError) {
+              console.error('Retry to play fail sound failed:', retryError);
+            }
           }
 
           // Wait for animations to complete
-          await new Promise(resolve => setTimeout(resolve, 1200)); // 1500 - 300 = 1200
+          await new Promise(resolve => setTimeout(resolve, 1200));
 
           // Reset state and move to next bar
           dispatch({ type: 'SET_BAR_FAILING', failing: false });

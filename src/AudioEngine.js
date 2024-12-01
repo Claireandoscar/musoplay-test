@@ -4,7 +4,22 @@ export class AudioEngine {
     this.buffers = new Map();
     this.initialized = false;
     this.activeSources = new Set();
+    this._hasUserGesture = false;
     this.setupVisibilityHandler();
+    this.setupUserGestureTracking();
+  }
+  
+  setupUserGestureTracking() {
+    const userGestureEvents = ['touchstart', 'touchend', 'click', 'keydown'];
+    const handler = () => {
+      this._hasUserGesture = true;
+      userGestureEvents.forEach(event => {
+        document.removeEventListener(event, handler);
+      });
+    };
+    userGestureEvents.forEach(event => {
+      document.addEventListener(event, handler);
+    });
   }
 
   setupVisibilityHandler() {
@@ -75,27 +90,40 @@ export class AudioEngine {
   async init() {
     console.log('Starting AudioEngine initialization...');
     try {
-      if (this.initialized) {
-        console.log('AudioEngine already initialized');
-        return;
+      // Don't reinitialize if already running
+      if (this.initialized && this.audioContext?.state === 'running') {
+        console.log('AudioEngine already initialized and running');
+        return true;
       }
-
+  
+      // Create context if it doesn't exist
       if (!this.audioContext) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.audioContext = new AudioContext();
+        this.audioContext = new AudioContext({
+          // Add these options for better Android compatibility
+          latencyHint: 'interactive',
+          sampleRate: 44100
+        });
         console.log('AudioContext created:', this.audioContext.state);
       }
-
-      if (this.audioContext.state === 'suspended') {
+  
+      // Force resume context
+      if (this.audioContext.state !== 'running') {
         console.log('Attempting to resume suspended audio context...');
+        // Add user gesture requirement warning
+        if (!this._hasUserGesture) {
+          console.log('Waiting for user gesture before resuming audio...');
+          return false;
+        }
         await this.audioContext.resume();
+        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay for Android
         console.log('Audio context resumed:', this.audioContext.state);
       }
-
+  
       this.initialized = true;
       console.log('AudioEngine initialization complete');
       return true;
-
+  
     } catch (error) {
       console.error('AudioEngine initialization failed:', error);
       return false;
@@ -129,38 +157,67 @@ export class AudioEngine {
       console.error(`Cannot play sound ${id}: Engine not initialized or buffer not found`);
       return;
     }
-
+  
     try {
       if (document.hidden) {
         console.log('Page is hidden, not playing sound');
         return;
       }
-
+  
+      // Check audio context state
+      if (this.audioContext.state !== 'running') {
+        console.log('Audio context not running, attempting to resume...');
+        this.audioContext.resume();
+      }
+  
       const source = this.audioContext.createBufferSource();
       source.buffer = this.buffers.get(id);
       
       const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = 1.0;
-
+      // Reduce gain slightly for Android to prevent distortion
+      gainNode.gain.value = 0.9;
+  
       source.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
-
-      const startTime = this.audioContext.currentTime + time;
+  
+      // Add small delay for Android
+      const startTime = this.audioContext.currentTime + (time || 0.01);
       source.start(startTime);
       
-      // Add to active sources
       this.activeSources.add(source);
       
-      // Remove from active sources when done
       source.onended = () => {
         this.activeSources.delete(source);
         source.disconnect();
+        gainNode.disconnect();
       };
       
-      console.log(`Sound ${id} started playing`);
       return source;
     } catch (error) {
       console.error(`Error playing sound ${id}:`, error);
+    }
+  }
+
+  async recoverAudio() {
+    if (!this._hasUserGesture) {
+      console.log('Waiting for user gesture before recovery...');
+      return false;
+    }
+    
+    try {
+      if (this.audioContext?.state === 'suspended') {
+        await this.audioContext.resume();
+        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay for Android
+      }
+      
+      if (!this.initialized) {
+        await this.init();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Audio recovery failed:', error);
+      return false;
     }
   }
 
