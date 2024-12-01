@@ -166,33 +166,45 @@ function App() {
     }
 }, [audioFiles]);
 
-  useEffect(() => {
-    const loadAllSounds = async () => {
-        console.log('Loading all sounds...');
-        try {
-            // Make sure audio engine is initialized
-            await audioEngine.init();
-            
-            // Load all piano notes (1-8)
-            for (let i = 1; i <= 8; i++) {
-                await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
-                console.log(`Loaded note ${i}`);
-            }
-            
-            // Load all UI sounds
-            await audioEngine.loadSound('/assets/audio/ui-sounds/wrong-note.mp3', 'wrong');
-            await audioEngine.loadSound('/assets/audio/ui-sounds/bar-failed.mp3', 'fail');
-            await audioEngine.loadSound('/assets/audio/ui-sounds/bar-complete.mp3', 'complete');
-            await audioEngine.loadSound('/assets/audio/ui-sounds/note-flip.mp3', 'flip');
-            
-            console.log('All sounds loaded successfully');
-        } catch (error) {
-            console.error('Failed to load sounds:', error);
-        }
-    };
+useEffect(() => {
+  const loadAllSounds = async () => {
+      console.log('Loading all sounds...');
+      try {
+          // Make sure audio engine is initialized
+          await audioEngine.init();
+          
+          // Load all piano notes (1-8)
+          for (let i = 1; i <= 8; i++) {
+              await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
+              console.log(`Loaded note ${i}`);
+          }
+          
+          // Load all UI sounds
+          await audioEngine.loadSound('/assets/audio/ui-sounds/wrong-note.mp3', 'wrong');
+          await audioEngine.loadSound('/assets/audio/ui-sounds/bar-failed.mp3', 'fail');
+          await audioEngine.loadSound('/assets/audio/ui-sounds/bar-complete.mp3', 'complete');
+          await audioEngine.loadSound('/assets/audio/ui-sounds/note-flip.mp3', 'flip');
 
-    loadAllSounds();
-}, []);
+          // If we have melody files, preload them
+          if (audioFiles.length > 0) {
+              console.log('Preloading melody files...');
+              for (let i = 0; i < audioFiles.length; i++) {
+                  const audioPath = audioFiles[i];
+                  await audioEngine.loadSound(audioPath, `melody${i}`);
+                  console.log(`Preloaded melody ${i}`);
+              }
+              setIsAudioLoaded(true);
+          }
+          
+          console.log('All sounds loaded successfully');
+      } catch (error) {
+          console.error('Failed to load sounds:', error);
+          setIsAudioLoaded(false);
+      }
+  };
+
+  loadAllSounds();
+}, [audioFiles]); // Added audioFiles as dependency
 
   // Audio initialization effect
   useEffect(() => {
@@ -314,81 +326,33 @@ function App() {
     console.log('Listen & Practice button clicked');
 
     try {
-        // Platform detection
-        const isAndroid = /Android/.test(navigator.userAgent);
-        console.log('Platform:', isAndroid ? 'Android' : 'iOS/Other');
-
-        // Always ensure audio context is ready
+        // Ensure audio context is running
         if (audioEngine?.audioContext?.state !== 'running') {
             await audioEngine.init();
-            // Longer delay for Android
-            await new Promise(resolve => 
-                setTimeout(resolve, isAndroid ? 150 : 100)
-            );
         }
 
-        if (!melodyAudio) {
-            console.log('No melody audio available');
-            return;
-        }
-
-        // Reset audio state
-        melodyAudio.currentTime = 0;
-        
-        // First attempt to play
+        // Try to play using AudioEngine first (preloaded audio)
         try {
-            console.log('Attempting to play melody');
-            await melodyAudio.play();
-            
-            // Update game state after successful play
+            await audioEngine.playSound(`melody${currentBarIndex}`);
             dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
             setGameMode('practice');
             setIsListenPracticeMode(true);
+        } catch (error) {
+            console.error('AudioEngine playback failed, falling back to Audio API:', error);
             
-        } catch (playError) {
-            console.error("Initial playback failed:", playError);
-            
-            // Platform-specific retry
-            try {
-                // Longer delay for Android
-                await new Promise(resolve => 
-                    setTimeout(resolve, isAndroid ? 200 : 100)
-                );
-                
-                // For Android, try to reinitialize audio engine
-                if (isAndroid) {
-                    await audioEngine.init();
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                }
-                
+            // Fallback to Audio API if AudioEngine fails
+            if (melodyAudio) {
+                melodyAudio.currentTime = 0;
                 await melodyAudio.play();
-                
                 dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
                 setGameMode('practice');
                 setIsListenPracticeMode(true);
-                
-            } catch (retryError) {
-                console.error("Retry playback failed:", retryError);
-                
-                // Final fallback - try through AudioEngine
-                try {
-                    await audioEngine.loadSound(melodyAudio.src, `practice-melody-${currentBarIndex}`);
-                    await audioEngine.playSound(`practice-melody-${currentBarIndex}`);
-                    
-                    dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
-                    setGameMode('practice');
-                    setIsListenPracticeMode(true);
-                } catch (finalError) {
-                    console.error("All playback attempts failed");
-                }
             }
         }
-
     } catch (error) {
         console.error("Error in handleListenPractice:", error);
     }
-}, [melodyAudio, dispatch, currentBarIndex]);
-
+}, [melodyAudio, currentBarIndex, dispatch]);
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (!document.hidden && audioEngine?.audioContext?.state === 'suspended') {
