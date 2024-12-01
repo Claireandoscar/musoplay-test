@@ -309,79 +309,85 @@ function App() {
   }, [currentBarIndex, correctSequence, loadAudio]);
 
   // Updated practice mode handler
+ 
   const handleListenPractice = useCallback(async () => {
     console.log('Listen & Practice button clicked');
-    console.log('Current audio states:', {
-      audioEngineState: audioEngine?.audioContext?.state,
-      melodyAudioState: melodyAudio?.readyState,
-      isAudioLoaded: isAudioLoaded,
-      gamePhase: gameState.gamePhase
-    });
-  
+
     try {
-      // First ensure audio context is ready
-      if (audioEngine?.audioContext?.state !== 'running') {
-        console.log('Audio context not running, attempting to initialize...');
-        await audioEngine.init();
-        // Small delay for Android
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-  
-      if (melodyAudio) {
+        // Platform detection
+        const isAndroid = /Android/.test(navigator.userAgent);
+        console.log('Platform:', isAndroid ? 'Android' : 'iOS/Other');
+
+        // Always ensure audio context is ready
+        if (audioEngine?.audioContext?.state !== 'running') {
+            await audioEngine.init();
+            // Longer delay for Android
+            await new Promise(resolve => 
+                setTimeout(resolve, isAndroid ? 150 : 100)
+            );
+        }
+
+        if (!melodyAudio) {
+            console.log('No melody audio available');
+            return;
+        }
+
         // Reset audio state
         melodyAudio.currentTime = 0;
         
-        // Try to play with retry mechanism
+        // First attempt to play
         try {
-          console.log('Attempting to play melody audio...');
-          await melodyAudio.play();
-        } catch (error) {
-          console.error("Initial melody playback failed:", error);
-          // Retry after reinitializing audio
-          try {
-            console.log('Retrying audio playback...');
-            await audioEngine.init();
+            console.log('Attempting to play melody');
             await melodyAudio.play();
-          } catch (retryError) {
-            console.error("Retry melody playback failed:", retryError);
-            // Try AudioEngine as backup
+            
+            // Update game state after successful play
+            dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
+            setGameMode('practice');
+            setIsListenPracticeMode(true);
+            
+        } catch (playError) {
+            console.error("Initial playback failed:", playError);
+            
+            // Platform-specific retry
             try {
-              console.log('Attempting backup playback through AudioEngine...');
-              await audioEngine.loadSound(melodyAudio.src, `practice-melody-${currentBarIndex}`);
-              await audioEngine.playSound(`practice-melody-${currentBarIndex}`);
-            } catch (finalError) {
-              console.error("All playback attempts failed:", finalError);
+                // Longer delay for Android
+                await new Promise(resolve => 
+                    setTimeout(resolve, isAndroid ? 200 : 100)
+                );
+                
+                // For Android, try to reinitialize audio engine
+                if (isAndroid) {
+                    await audioEngine.init();
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                
+                await melodyAudio.play();
+                
+                dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
+                setGameMode('practice');
+                setIsListenPracticeMode(true);
+                
+            } catch (retryError) {
+                console.error("Retry playback failed:", retryError);
+                
+                // Final fallback - try through AudioEngine
+                try {
+                    await audioEngine.loadSound(melodyAudio.src, `practice-melody-${currentBarIndex}`);
+                    await audioEngine.playSound(`practice-melody-${currentBarIndex}`);
+                    
+                    dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
+                    setGameMode('practice');
+                    setIsListenPracticeMode(true);
+                } catch (finalError) {
+                    console.error("All playback attempts failed");
+                }
             }
-          }
         }
-      } else {
-        console.log('No melody audio available');
-      }
-  
-      console.log('Updating game state...');
-      dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
-      setGameMode('practice');
-      setIsListenPracticeMode(true);
-      console.log('Game state updated to practice mode');
-  
+
     } catch (error) {
-      console.error("Error in handleListenPractice:", error);
-    } finally {
-      console.log('Final state:', {
-        gamePhase: gameState.gamePhase,
-        isListenPracticeMode: isListenPracticeMode,
-        gameMode: gameMode
-      });
+        console.error("Error in handleListenPractice:", error);
     }
-  }, [
-    melodyAudio, 
-    dispatch, 
-    currentBarIndex, 
-    gameState.gamePhase, 
-    isListenPracticeMode, 
-    gameMode,
-    isAudioLoaded // Added this dependency
-  ]); // Removed audioEngine from dependencies
+}, [melodyAudio, dispatch, currentBarIndex]);
 
   useEffect(() => {
     const handleVisibilityChange = async () => {
