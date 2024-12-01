@@ -232,13 +232,15 @@ function App() {
   // Audio initialization effect
   useEffect(() => {
     console.log('Audio initialization effect running');
-    console.log('User Agent:', navigator.userAgent);
-    console.log('Initial audio loaded state:', isAudioLoaded);
     
     const initAudio = async () => {
-        console.log('Initializing audio engine from App.js');
+        console.log('Starting initAudio in App.js');
         try {
-            // First, handle user interaction requirement
+            // Platform detection
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            console.log('Platform:', isIOS ? 'iOS' : 'Android/Other');
+
+            // Handle user interaction requirement
             const hasInteracted = await new Promise(resolve => {
                 const handleInteraction = () => {
                     console.log('User interaction detected');
@@ -247,6 +249,7 @@ function App() {
                     resolve(true);
                 };
                 
+                // Setup event listeners
                 document.addEventListener('touchstart', handleInteraction, { passive: false });
                 document.addEventListener('mousedown', handleInteraction);
                 
@@ -256,29 +259,47 @@ function App() {
                 }
             });
 
-            if (!hasInteracted) {
-                console.log('No user interaction yet');
+            if (!hasInteracted && !isIOS) {
+                console.log('Waiting for user interaction (Android requirement)');
                 return;
             }
 
-            // Check audioFiles availability
-            console.log('Audio files available:', audioFiles.length);
-            console.log('Current bar index:', currentBarIndex);
-            
-            const success = await audioEngine.init();
-            console.log('Audio initialization result:', success);
-            
-            if (success && audioFiles.length > 0) {
-                const audioLoadResult = await loadAudio(currentBarIndex);
-                console.log('Audio load result:', audioLoadResult);
-                setIsAudioLoaded(true);
-                console.log('isAudioLoaded set to true');
-                dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
+            // Audio initialization
+            if (audioFiles.length > 0) {
+                console.log(`Found ${audioFiles.length} audio files`);
+                
+                const success = await audioEngine.init();
+                console.log('AudioEngine init result:', success);
+
+                if (success) {
+                    try {
+                        const audioLoadResult = await loadAudio(currentBarIndex);
+                        console.log('Audio load result:', audioLoadResult);
+                        
+                        // Set states
+                        setIsAudioLoaded(true);
+                        console.log('isAudioLoaded set to true');
+                        dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
+                        
+                        // Platform-specific delay
+                        if (isIOS) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        } else {
+                            await new Promise(resolve => setTimeout(resolve, 50));
+                        }
+                        
+                        console.log('Final state check:', {
+                            isAudioLoaded,
+                            audioFiles: audioFiles.length,
+                            currentBar: currentBarIndex
+                        });
+                    } catch (loadError) {
+                        console.error('Error loading audio:', loadError);
+                        setIsAudioLoaded(false);
+                    }
+                }
             } else {
-                console.log('Audio initialization conditions not met:', {
-                    success,
-                    hasAudioFiles: audioFiles.length > 0
-                });
+                console.log('No audio files available yet');
             }
         } catch (error) {
             console.error('Audio initialization error:', error);
@@ -287,8 +308,7 @@ function App() {
     };
 
     initAudio();
-    
-    // Cleanup function
+
     return () => {
         console.log('Cleaning up audio initialization effect');
     };
