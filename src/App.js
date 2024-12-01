@@ -801,89 +801,80 @@ const handleNotePlay = useCallback(async (noteNumber) => {
 ]);
 return (
   <div className="game-wrapper">
-      {showStartScreen ? (
-          <div className="game-container">
-              <StartScreen onStartGame={handleStartGame} />
+    {showStartScreen ? (
+      <div className="game-container">
+        <StartScreen onStartGame={handleStartGame} />
+      </div>
+    ) : (
+      <div className={`game-container ${gameMode}`}>
+        <Toolbar onShowInstructions={() => {
+          console.log('Setting showInstructions to true');
+          setShowInstructions(true);
+        }} />
+        <GameBoard 
+          barHearts={gameState.barHearts}
+          currentBarIndex={currentBarIndex}
+          renderBar={{
+            correctSequence,
+            currentNoteIndex: gameState.currentNoteIndex,
+            completedBars: gameState.completedBars,
+            isGameComplete,
+            failedBars: gameState.failedBars
+          }}
+          isBarFailed={gameState.isBarFailing}
+          gamePhase={gameState.gamePhase}
+        />
+        <Controls 
+          onListenPractice={handleListenPractice}
+          onPerform={handlePerform}
+          isListenPracticeMode={isListenPracticeMode}
+          isPerformAvailable={isAudioLoaded}
+          isAudioLoaded={isAudioLoaded}
+          gamePhase={gameState.gamePhase}
+          ref={ref => console.log('Controls props:', {
+            isListenPracticeMode,
+            isPerformAvailable: isAudioLoaded,
+            isAudioLoaded,
+            gamePhase: gameState.gamePhase
+          })}
+        />
+        <VirtualInstrument 
+          notes={notes}
+          onNotePlay={handleNotePlay}
+          isGameEnded={isGameEnded}
+          isBarFailing={gameState.isBarFailing}
+        />
+        <ProgressBar completedBars={gameState.completedBars.filter(Boolean).length} />
+        {showEndAnimation && (
+          <EndGameAnimation 
+            score={score}
+            barHearts={gameState.barHearts}
+            onNext={handleNextGame}
+            currentGameNumber={currentGameNumber}
+          />
+        )}
+        {showInstructions && (
+          <div className="instructions-popup">
+            <div className="instructions-content">
+              <h2>HOW TO PLAY</h2>
+              <div className="instruction-flow">
+                <p>
+                  1. PRESS LISTEN & PRACTICE<br/>
+                  2. FIND THE NOTES YOU HEAR<br/>
+                  3. PRACTICE AS MUCH AS YOU NEED<br/>
+                  4. PRESS PERFORM WHEN READY<br/>
+                  5. CAREFUL - MISTAKES COST HEARTS!
+                </p>
+              </div>
+              <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
+              <button className="next-button instructions-next" onClick={() => setShowInstructions(false)}>
+                <img src="/assets/images/ui/next.svg" alt="Next" />
+              </button>
+            </div>
           </div>
-      ) : (
-          <div className={`game-container ${gameMode}`}>
-              <Toolbar onShowInstructions={() => {
-                  console.log('Setting showInstructions to true');
-                  setShowInstructions(true);
-              }} />
-              <GameBoard 
-    barHearts={gameState.barHearts} 
-    currentBarIndex={currentBarIndex}
-    renderBar={{
-        correctSequence,
-        currentNoteIndex: gameState.currentNoteIndex,
-        completedBars: gameState.completedBars,
-        isGameComplete,
-        failedBars: gameState.failedBars  // Make sure this is added
-    }}
-    isBarFailed={gameState.isBarFailing}
-    gamePhase={gameState.gamePhase}
-/>
-<Controls 
-    onListenPractice={handleListenPractice}
-    onPerform={handlePerform}
-    isListenPracticeMode={isListenPracticeMode}
-    isPerformAvailable={isAudioLoaded}
-    isAudioLoaded={isAudioLoaded}
-    gamePhase={gameState.gamePhase}
-    // Add this to verify props
-    ref={ref => console.log('Controls props:', {
-        isListenPracticeMode,
-        isPerformAvailable: isAudioLoaded,
-        isAudioLoaded,
-        gamePhase: gameState.gamePhase
-    })}
-/>
-              <VirtualInstrument 
-                  notes={notes}
-                  onNotePlay={handleNotePlay}
-                  isGameEnded={isGameEnded}
-                  isBarFailing={gameState.isBarFailing}
-              />
-              <ProgressBar completedBars={gameState.completedBars.filter(Boolean).length} />
-              {showEndAnimation && (
-                  <EndGameAnimation 
-                      score={score} 
-                      barHearts={gameState.barHearts} 
-                      onNext={handleNextGame}
-                      currentGameNumber={currentGameNumber}
-                  />
-              )}
-              {showInstructions && (
-                  <div className="instructions-popup">
-                      <button className="close-button" onClick={() => setShowInstructions(false)}>
-                          ×
-                      </button>
-                      <div className="instructions-content">
-                          <h2>HOW TO PLAY</h2>
-                          <div className="instruction-flow">
-                              <p>
-                                  Press <img 
-                                      src="/assets/images/ui/listen-practice.svg" 
-                                      alt="Listen & Practice" 
-                                      className="inline-button large"
-                                  /> to hear the melody, try to find the right notes using the virtual instrument, then when you're ready press <img 
-                                      src="/assets/images/ui/perform.svg" 
-                                      alt="Perform" 
-                                      className="inline-button small"
-                                  /> to play the melody for real, but be careful you could lose a <img 
-                                      src="/assets/images/ui/heart.svg" 
-                                      alt="Heart" 
-                                      className="inline-icon"
-                                  /> if you make a mistake!
-                              </p>
-                          </div>
-                          <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
-                      </div>
-                  </div>
-              )}
-          </div>
-      )}
+        )}
+      </div>
+    )}
   </div>
 );
 }

@@ -66,30 +66,22 @@ const StartScreen = ({ onStartGame }) => {
       )}
 
       {showInstructions && (
-        <div className="instructions-popup" onClick={handleCloseInstructions}>
-          <button className="close-button" onClick={handleCloseInstructions}>
-            ×
-          </button>
+        <div className="instructions-popup">
           <div className="instructions-content">
             <h2>HOW TO PLAY</h2>
             <div className="instruction-flow">
-              <p>
-                Press <img 
-                  src="/assets/images/ui/listen-practice.svg" 
-                  alt="Listen & Practice" 
-                  className="inline-button large"
-                /> to hear the melody, try to find the right notes using the virtual instrument, then when you're ready press <img 
-                  src="/assets/images/ui/perform.svg" 
-                  alt="Perform" 
-                  className="inline-button small"
-                /> to play the melody for real, but be careful you could lose a <img 
-                  src="/assets/images/ui/heart.svg" 
-                  alt="Heart" 
-                  className="inline-icon"
-                /> if you make a mistake!
-              </p>
+            <p>
+  1. PRESS LISTEN & PRACTICE<br/>
+  2. FIND THE NOTES YOU HEAR<br/>
+  3. PRACTICE AS MUCH AS YOU NEED<br/>
+  4. PRESS PERFORM WHEN READY<br/>
+  5. CAREFUL - MISTAKES COST HEARTS!
+</p>
             </div>
             <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
+            <button className="next-button instructions-next" onClick={handleCloseInstructions}>
+              <img src="/assets/images/ui/next.svg" alt="Next" />
+            </button>
           </div>
         </div>
       )}
