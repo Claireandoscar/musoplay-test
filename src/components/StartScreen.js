@@ -65,27 +65,31 @@ const StartScreen = ({ onStartGame }) => {
         </div>
       )}
 
-{showInstructions && (
-  <div className="instructions-popup">
-    <div className="instructions-content">
-      <h2>HOW TO PLAY</h2>
-      <div className="instruction-flow">
-        <p>
-          ⚠️ TURN ON YOUR DEVICE SOUND! ⚠️<br/><br/>
-          1. PRESS LISTEN & PRACTICE<br/>
-          2. PLAY WHAT YOU HEAR USING THE COLOURFUL BUTTONS<br/>
-          3. PRACTICE AS MANY TIMES AS YOU NEED<br/>
-          4. PRESS PERFORM TO PLAY THE MELODY FOR REAL<br/>
-          5. HIT THE RIGHT NOTES TO HANG ON TO YOUR HEARTS!
-        </p>
-      </div>
-      <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
-      <button className="next-button instructions-next" onClick={handleCloseInstructions}>
-        <img src="/assets/images/ui/next.svg" alt="Next" />
-      </button>
-    </div>
-  </div>
-)}
+      {showInstructions && (
+        <div className="instructions-popup">
+          <div className="instructions-content">
+            <h2>HOW TO PLAY</h2>
+            <div className="instruction-flow">
+              <p>
+                <span style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                  <img src="/assets/images/ui/heart.svg" alt="heart" style={{ width: '20px', height: '20px', margin: '0 5px' }} />
+                  TURN ON YOUR DEVICE SOUND
+                  <img src="/assets/images/ui/heart.svg" alt="heart" style={{ width: '20px', height: '20px', margin: '0 5px' }} />
+                </span>
+                1. PRESS LISTEN & PRACTICE<br/>
+                2. PLAY WHAT YOU HEAR USING THE COLOURFUL BUTTONS<br/>
+                3. PRACTICE AS MANY TIMES AS YOU NEED<br/>
+                4. PRESS PERFORM TO PLAY THE MELODY FOR REAL<br/>
+                5. HIT THE RIGHT NOTES TO HANG ON TO YOUR HEARTS!
+              </p>
+            </div>
+            <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
+            <button className="next-button instructions-next" onClick={handleCloseInstructions}>
+              <img src="/assets/images/ui/next.svg" alt="Next" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
