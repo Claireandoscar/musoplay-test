@@ -335,18 +335,33 @@ useEffect(() => {
     if (!isAudioLoaded) return;
   
     try {
-      // Ensure audio context is running
+      // Force reinitialize audio engine and verify state
       await audioEngine.init();
       
-      // Play the current melody
-      audioEngine.playSound(`melody${currentBarIndex}`);
+      // Verify buffers are loaded before proceeding
+      const bufferCheck = await audioEngine.verifyBuffers();
+      if (!bufferCheck) {
+        // If buffers aren't found, reload them
+        for (let i = 1; i <= 8; i++) {
+          await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
+        }
+      }
       
-      // Update game state
-      dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
-      setGameMode('practice');
-      setIsListenPracticeMode(true);
+      // Now attempt to play melody
+      const playSuccess = await audioEngine.playSound(`melody${currentBarIndex}`);
+      
+      if (playSuccess) {
+        dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
+        setGameMode('practice');
+        setIsListenPracticeMode(true);
+        document.documentElement.dataset.hasInteracted = 'true';
+      } else {
+        throw new Error('Failed to play melody');
+      }
+      
     } catch (error) {
       console.error('Failed to play melody:', error);
+      // Error recovery...
     }
   }, [currentBarIndex, dispatch, isAudioLoaded]);
 

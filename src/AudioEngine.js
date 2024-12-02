@@ -140,6 +140,17 @@ export class AudioEngine {
     console.log('Cleared melody buffers');
   }
 
+    // Add the new method here
+    async verifyBuffers() {
+      // Check if basic buffers are loaded
+      for (let i = 1; i <= 8; i++) {
+        if (!this.buffers.has(`n${i}`)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
   playSound(id, time = 0) {
     if (!this.initialized || !this.audioContext || !this.buffers.has(id)) {
       console.error(`Cannot play sound ${id}: Engine not initialized or buffer not found`);
