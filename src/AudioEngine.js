@@ -24,53 +24,97 @@ export class AudioEngine {
   }
 
   setupVisibilityHandler() {
+    // Bind the method to the class instance
+    this.stopAllSounds = this.stopAllSounds.bind(this);
+
     document.addEventListener('visibilitychange', async () => {
-      if (document.hidden) {
-        console.log('Page hidden - stopping all audio');
-        this.stopAllSounds();
-        if (this.audioContext) {
-          this.audioContext.suspend().catch(e => console.log('Error suspending context:', e));
+        if (document.hidden) {
+            console.log('Page hidden - stopping all audio');
+            // Use the bound method
+            this.stopAllSounds();
+
+            if (this.audioContext?.state === 'running') {
+                try {
+                    await this.audioContext.suspend();
+                } catch (e) {
+                    console.error('Error suspending context:', e);
+                }
+            }
+        } else {
+            console.log('Page visible - resuming audio');
+            try {
+                if (!this.audioContext) {
+                    await this.init();
+                } else if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                    if (!await this.verifyBuffers()) {
+                        await this.init();
+                    }
+                }
+                this.initialized = true;
+                console.log('Audio context resumed successfully');
+            } catch (e) {
+                console.error('Error resuming audio context:', e);
+                try {
+                    await this.init();
+                } catch (reinitError) {
+                    console.error('Failed to reinitialize audio:', reinitError);
+                }
+            }
         }
-      } else {
-        console.log('Page visible - resuming audio context');
-        if (this.audioContext?.state === 'suspended') {
-          try {
-            await this.audioContext.resume();
-            this.initialized = true;
-            console.log('Audio context resumed successfully');
-          } catch (e) {
-            console.log('Error resuming audio context:', e);
-            await this.init();
-          }
-        }
-      }
     });
 
+    // Use arrow functions to maintain 'this' context
     window.addEventListener('pagehide', () => {
-      this.stopAllSounds();
+        this.stopAllSounds();
+    });
+
+    window.addEventListener('pageshow', async () => {
+        try {
+            if (this.audioContext?.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+        } catch (error) {
+            console.error('Error resuming on pageshow:', error);
+        }
     });
 
     window.addEventListener('blur', () => {
-      this.stopAllSounds();
+        this.stopAllSounds();
     });
-  }
 
-  stopAllSounds() {
-    console.log('Stopping all sounds');
-    this.activeSources.forEach(source => {
-      try {
-        source.stop(0);
-        source.disconnect();
-      } catch (e) {
-        console.log('Error stopping source:', e);
-      }
+    window.addEventListener('focus', async () => {
+        try {
+            if (this.audioContext?.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+        } catch (error) {
+            console.error('Error resuming on focus:', error);
+        }
     });
-    this.activeSources.clear();
+}
+
+// Make sure the stopAllSounds method is defined like this
+stopAllSounds() {
+    console.log('Stopping all sounds');
+    if (this.activeSources) {
+        this.activeSources.forEach(source => {
+            try {
+                source.stop(0);
+                source.disconnect();
+            } catch (e) {
+                console.error('Error stopping source:', e);
+            }
+        });
+        this.activeSources.clear();
+    }
     
     if (this.audioContext) {
-      this.audioContext.suspend().catch(e => console.log('Error suspending context:', e));
+        this.audioContext.suspend().catch(e => 
+            console.error('Error suspending context:', e)
+        );
     }
-  }
+}
 
   async init() {
     console.log('Starting AudioEngine initialization...');
