@@ -9,7 +9,9 @@ import ProgressBar from './components/ProgressBar';
 import EndGameAnimation from './components/EndGameAnimation';
 import StartScreen from './components/StartScreen';
 import LogRocket from 'logrocket';
-LogRocket.init('gwciye/musoplay');  
+import { trackEvent } from './services/analytics';
+
+LogRocket.init('gwciye/musoplay');
 
 const initialGameState = {
   currentNoteIndex: 0,
@@ -332,6 +334,7 @@ useEffect(() => {
   // Updated practice mode handler
  
   const handleListenPractice = useCallback(async () => {
+    trackEvent('practice_mode_entered', { barIndex: currentBarIndex });
     if (!isAudioLoaded) return;
   
     try {
@@ -367,6 +370,7 @@ useEffect(() => {
 
 // Updated perform mode handler
 const handlePerform = useCallback(async () => {
+  trackEvent('perform_mode_entered', { barIndex: currentBarIndex });
   if (gameState.gamePhase === 'perform') {
     try {
       await audioEngine.init();
@@ -465,9 +469,10 @@ useEffect(() => {
 }, [fullTunePath]);
 
 // Handle game start
-const handleStartGame = () => {
-    setShowStartScreen(false);
-    setGameMode('initial');
+const handleStartGame = () => {   
+  trackEvent('game_started', { gameNumber: currentGameNumber });     
+  setShowStartScreen(false);     
+  setGameMode('initial');
     
     dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
     dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
@@ -493,8 +498,13 @@ useEffect(() => {
     };
 }, [melodyAudio]);
 
-
 const moveToNextBar = useCallback((isSuccess = true) => {
+  trackEvent('bar_completed', { 
+    barIndex: currentBarIndex,
+    success: isSuccess,
+    hearts: gameState.barHearts[currentBarIndex]
+  });  // Added closing brace
+ 
   // Clear previous bar audio
   if (melodyAudio) {
     melodyAudio.pause();
@@ -555,15 +565,20 @@ const moveToNextBar = useCallback((isSuccess = true) => {
     handleGameEnd();
   }
 }, [
-  currentBarIndex, 
-  correctSequence.length,
-  fullTuneMelodyAudio,
-  melodyAudio,
-  dispatch,
-  loadAudio
+  currentBarIndex,    
+  correctSequence.length,   
+  fullTuneMelodyAudio,   
+  melodyAudio,   
+  dispatch,   
+  loadAudio,
+  gameState.barHearts
 ]);
 
 const handleNextGame = () => {
+    trackEvent('game_completed', { 
+      gameNumber: currentGameNumber,
+      finalScore: score 
+    });
   if (currentGameNumber >= 3) {
     console.log('All games completed - should redirect to survey');
     return;
@@ -617,12 +632,18 @@ const handleNextGame = () => {
   resetGameStates();
 };
 
-const handleNotePlay = useCallback(async (noteNumber) => {
-  console.log('handleNotePlay called with note:', noteNumber);
+const handleNotePlay = useCallback(async (noteNumber) => {   
+  trackEvent('note_played', { 
+    note: noteNumber,
+    gamePhase: gameState.gamePhase,
+    barIndex: currentBarIndex   
+  });
 
-  if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {
-    console.log('Note ignored - wrong game phase:', gameState.gamePhase);
-    return;
+  console.log('handleNotePlay called with note:', noteNumber);  
+
+  if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {     
+    console.log('Note ignored - wrong game phase:', gameState.gamePhase);     
+    return;   
   }
 
   // Try to recover audio context if needed
