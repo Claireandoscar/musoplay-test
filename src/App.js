@@ -140,7 +140,7 @@ function App() {
     
     if (audioFiles.length === 0 || barIndex >= audioFiles.length) {
         console.log('No audio files available or invalid bar index');
-        setIsAudioLoaded(false);  // Explicitly set to false
+        setIsAudioLoaded(false);
         return;
     }
 
@@ -148,14 +148,13 @@ function App() {
         const audioPath = audioFiles[barIndex];
         console.log('Loading audio from path:', audioPath);
         
-        // Load into AudioEngine
-        await audioEngine.loadSound(audioPath, `melody${barIndex}`);
+        // Pass currentGameNumber here
+        await audioEngine.loadSound(audioPath, `melody${barIndex}`, currentGameNumber);
         
         // Create Audio object
         const audio = new Audio(audioPath);
         setMelodyAudio(audio);
         
-        // Explicitly set audio loaded to true
         setIsAudioLoaded(true);
         console.log('Audio successfully loaded, isAudioLoaded set to true');
         
@@ -165,151 +164,142 @@ function App() {
         setIsAudioLoaded(false);
         return null;
     }
-}, [audioFiles]);
+}, [audioFiles, currentGameNumber]); // Add currentGameNumber to dependencies
 
 useEffect(() => {
   const loadAllSounds = async () => {
-      console.log('Loading all sounds...');
+      console.log('Starting loadAllSounds...');
+      console.log('Current audioFiles:', audioFiles);
       try {
           // Make sure audio engine is initialized
-          await audioEngine.init();
+          const initResult = await audioEngine.init();
+          console.log('Audio engine init result:', initResult);
           
           // Load all piano notes (1-8)
+          console.log('Loading piano notes...');
           for (let i = 1; i <= 8; i++) {
               await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
               console.log(`Loaded note ${i}`);
           }
           
           // Load all UI sounds
+          console.log('Loading UI sounds...');
           await audioEngine.loadSound('/assets/audio/ui-sounds/wrong-note.mp3', 'wrong');
           await audioEngine.loadSound('/assets/audio/ui-sounds/bar-failed.mp3', 'fail');
           await audioEngine.loadSound('/assets/audio/ui-sounds/bar-complete.mp3', 'complete');
           await audioEngine.loadSound('/assets/audio/ui-sounds/note-flip.mp3', 'flip');
+          console.log('UI sounds loaded');
 
           // If we have melody files, preload them
           if (audioFiles.length > 0) {
-              console.log('Preloading melody files...');
+              console.log('Starting melody preload...');
               for (let i = 0; i < audioFiles.length; i++) {
                   const audioPath = audioFiles[i];
+                  console.log(`Loading melody ${i} from ${audioPath}`);
                   await audioEngine.loadSound(audioPath, `melody${i}`);
                   console.log(`Preloaded melody ${i}`);
               }
+              console.log('Setting isAudioLoaded to true');
               setIsAudioLoaded(true);
+          } else {
+              console.log('No audio files to preload');
           }
           
           console.log('All sounds loaded successfully');
       } catch (error) {
-          console.error('Failed to load sounds:', error);
+          console.error('Failed to load sounds:', error, error.stack);
           setIsAudioLoaded(false);
       }
   };
 
   loadAllSounds();
-}, [audioFiles]); // Added audioFiles as dependency
+}, [audioFiles]);
 
-  // Audio initialization effect
-  useEffect(() => {
-    console.log('Audio initialization effect running');
-    
-    const initAudio = async () => {
-        console.log('Starting initAudio in App.js');
-        try {
-            // Platform detection
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            console.log('Platform:', isIOS ? 'iOS' : 'Android/Other');
+useEffect(() => {
+  console.log('Audio initialization effect running');
+  
+  const initAudio = async () => {
+      console.log('Starting initAudio in App.js');
+      try {
+          // Platform detection
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          console.log('Platform:', isIOS ? 'iOS' : 'Android/Other');
 
-            // Handle user interaction requirement
-            const hasInteracted = await new Promise(resolve => {
-                const handleInteraction = () => {
-                    console.log('User interaction detected');
-                    document.removeEventListener('touchstart', handleInteraction);
-                    document.removeEventListener('mousedown', handleInteraction);
-                    resolve(true);
-                };
-                
-                // Setup event listeners
-                document.addEventListener('touchstart', handleInteraction, { passive: false });
-                document.addEventListener('mousedown', handleInteraction);
-                
-                if (document.documentElement.dataset.hasInteracted === 'true') {
-                    console.log('Previous interaction detected');
-                    resolve(true);
-                }
-            });
+          // Handle user interaction requirement
+          const hasInteracted = await new Promise(resolve => {
+              const handleInteraction = () => {
+                  console.log('User interaction detected');
+                  document.removeEventListener('touchstart', handleInteraction);
+                  document.removeEventListener('mousedown', handleInteraction);
+                  resolve(true);
+              };
+              
+              document.addEventListener('touchstart', handleInteraction, { passive: false });
+              document.addEventListener('mousedown', handleInteraction);
+              
+              if (document.documentElement.dataset.hasInteracted === 'true') {
+                  console.log('Previous interaction detected');
+                  resolve(true);
+              }
+          });
 
-            if (!hasInteracted && !isIOS) {
-                console.log('Waiting for user interaction (Android requirement)');
-                return;
-            }
+          if (!hasInteracted && !isIOS) {
+              console.log('Waiting for user interaction (Android requirement)');
+              return;
+          }
 
-            // Audio initialization
-            if (audioFiles.length > 0) {
-                console.log(`Found ${audioFiles.length} audio files`);
-                setIsPreloading(true);
+          if (audioFiles.length > 0) {
+              console.log(`Found ${audioFiles.length} audio files`);
+              setIsPreloading(true);
 
-                // Initialize audio engine
-                const success = await audioEngine.init();
-                console.log('AudioEngine init result:', success);
+              const success = await audioEngine.init();
+              console.log('AudioEngine init result:', success);
 
-                if (success) {
-                    try {
-                        // Preload all game audio
-                        const preloadSuccess = await audioEngine.preloadGameAudio(currentGameNumber);
-                        console.log('Preload success:', preloadSuccess);
+              if (success) {
+                  try {
+                      // Load current bar audio
+                      const audioLoadResult = await loadAudio(currentBarIndex);
+                      console.log('Audio load result:', audioLoadResult);
 
-                        if (preloadSuccess) {
-                            // Load current bar audio
-                            const audioLoadResult = await loadAudio(currentBarIndex);
-                            console.log('Audio load result:', audioLoadResult);
+                      setIsAudioLoaded(true);
+                      setIsPreloading(false);
+                      console.log('isAudioLoaded set to true');
+                      dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
 
-                            // Set states
-                            setIsAudioLoaded(true);
-                            setIsPreloading(false);
-                            console.log('isAudioLoaded set to true');
-                            dispatch({ type: 'SET_GAME_PHASE', payload: 'ready' });
+                      if (isIOS) {
+                          await new Promise(resolve => setTimeout(resolve, 100));
+                      } else {
+                          await new Promise(resolve => setTimeout(resolve, 50));
+                      }
 
-                            // Platform-specific delay
-                            if (isIOS) {
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                            } else {
-                                await new Promise(resolve => setTimeout(resolve, 50));
-                            }
+                      console.log('Final state check:', {
+                          isAudioLoaded,
+                          audioFiles: audioFiles.length,
+                          currentBar: currentBarIndex
+                      });
+                  } catch (loadError) {
+                      console.error('Error loading audio:', loadError);
+                      setIsAudioLoaded(false);
+                      setIsPreloading(false);
+                  }
+              }
+          } else {
+              console.log('No audio files available yet');
+              setIsPreloading(false);
+          }
+      } catch (error) {
+          console.error('Audio initialization error:', error);
+          setIsAudioLoaded(false);
+          setIsPreloading(false);
+      }
+  };
 
-                            console.log('Final state check:', {
-                                isAudioLoaded,
-                                audioFiles: audioFiles.length,
-                                currentBar: currentBarIndex,
-                                preloadComplete: true
-                            });
-                        } else {
-                            console.error('Failed to preload game audio');
-                            setIsAudioLoaded(false);
-                            setIsPreloading(false);
-                        }
-                    } catch (loadError) {
-                        console.error('Error loading audio:', loadError);
-                        setIsAudioLoaded(false);
-                        setIsPreloading(false);
-                    }
-                }
-            } else {
-                console.log('No audio files available yet');
-                setIsPreloading(false);
-            }
-        } catch (error) {
-            console.error('Audio initialization error:', error);
-            setIsAudioLoaded(false);
-            setIsPreloading(false);
-        }
-    };
+  initAudio();
 
-    initAudio();
-
-    return () => {
-        console.log('Cleaning up audio initialization effect');
-    };
-}, [audioFiles, currentBarIndex, loadAudio, dispatch, isAudioLoaded, currentGameNumber]);
-  // Fetch audio files effect
+  return () => {
+      console.log('Cleaning up audio initialization effect');
+  };
+}, [audioFiles, currentBarIndex, loadAudio, dispatch, isAudioLoaded]);
   useEffect(() => {
     const fetchAudioFiles = async () => {
         try {
@@ -781,19 +771,13 @@ return (
           gamePhase={gameState.gamePhase}
         />
         <Controls 
-          onListenPractice={handleListenPractice}
-          onPerform={handlePerform}
-          isListenPracticeMode={isListenPracticeMode}
-          isPerformAvailable={isAudioLoaded}
-          isAudioLoaded={isAudioLoaded}
-          gamePhase={gameState.gamePhase}
-          ref={ref => console.log('Controls props:', {
-            isListenPracticeMode,
-            isPerformAvailable: isAudioLoaded,
-            isAudioLoaded,
-            gamePhase: gameState.gamePhase
-          })}
-        />
+  onListenPractice={handleListenPractice}
+  onPerform={handlePerform}
+  isListenPracticeMode={isListenPracticeMode}
+  isPerformAvailable={isAudioLoaded}
+  isAudioLoaded={isAudioLoaded}
+  gamePhase={gameState.gamePhase}
+/>
         <VirtualInstrument 
           notes={notes}
           onNotePlay={handleNotePlay}

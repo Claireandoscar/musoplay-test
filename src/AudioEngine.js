@@ -1,147 +1,165 @@
-// AudioEngine.js - Enhanced version
-class AudioEngine {
+export class AudioEngine {
   constructor() {
     this.audioContext = null;
     this.buffers = new Map();
     this.initialized = false;
     this.activeSources = new Set();
-    this.loadingPromises = new Map();
-    this.preloadComplete = false;
+    this._hasUserGesture = false;
+    this.currentGame = null;
+    this.setupVisibilityHandler();
+    this.setupUserGestureTracking();
+  }
+  
+  setupUserGestureTracking() {
+    const userGestureEvents = ['touchstart', 'touchend', 'click', 'keydown'];
+    const handler = () => {
+      this._hasUserGesture = true;
+      userGestureEvents.forEach(event => {
+        document.removeEventListener(event, handler);
+      });
+    };
+    userGestureEvents.forEach(event => {
+      document.addEventListener(event, handler);
+    });
+  }
+
+  setupVisibilityHandler() {
+    document.addEventListener('visibilitychange', async () => {
+      if (document.hidden) {
+        console.log('Page hidden - stopping all audio');
+        this.stopAllSounds();
+        if (this.audioContext) {
+          this.audioContext.suspend().catch(e => console.log('Error suspending context:', e));
+        }
+      } else {
+        console.log('Page visible - resuming audio context');
+        if (this.audioContext?.state === 'suspended') {
+          try {
+            await this.audioContext.resume();
+            this.initialized = true;
+            console.log('Audio context resumed successfully');
+          } catch (e) {
+            console.log('Error resuming audio context:', e);
+            await this.init();
+          }
+        }
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      this.stopAllSounds();
+    });
+
+    window.addEventListener('blur', () => {
+      this.stopAllSounds();
+    });
+  }
+
+  stopAllSounds() {
+    console.log('Stopping all sounds');
+    this.activeSources.forEach(source => {
+      try {
+        source.stop(0);
+        source.disconnect();
+      } catch (e) {
+        console.log('Error stopping source:', e);
+      }
+    });
+    this.activeSources.clear();
+    
+    if (this.audioContext) {
+      this.audioContext.suspend().catch(e => console.log('Error suspending context:', e));
+    }
   }
 
   async init() {
+    console.log('Starting AudioEngine initialization...');
     try {
       if (this.initialized && this.audioContext?.state === 'running') {
+        console.log('AudioEngine already initialized and running');
         return true;
       }
 
-      // Force audio context creation even in silent mode
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.audioContext = new AudioContext({
-        // This enables WebAudio to work in iOS silent mode
-        sinkId: 'default',
-        latencyHint: 'interactive'
-      });
-
-      // Enable audio processing
-      if (this.audioContext.state !== 'running') {
-        await this.audioContext.resume();
+      if (!this.audioContext) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.audioContext = new AudioContext();
+        console.log('AudioContext created:', this.audioContext.state);
       }
 
-      // Setup audio processing chain
-      this.masterGain = this.audioContext.createGain();
-      this.compressor = this.audioContext.createDynamicsCompressor();
-      
-      // Configure compressor for better mobile audio
-      this.compressor.threshold.value = -24;
-      this.compressor.knee.value = 30;
-      this.compressor.ratio.value = 12;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.25;
-      
-      // Connect audio chain
-      this.masterGain.connect(this.compressor);
-      this.compressor.connect(this.audioContext.destination);
+      if (this.audioContext.state !== 'running') {
+        console.log('Attempting to resume suspended audio context...');
+        await this.audioContext.resume();
+        console.log('Audio context resumed:', this.audioContext.state);
+      }
 
       this.initialized = true;
+      console.log('AudioEngine initialization complete');
       return true;
+
     } catch (error) {
       console.error('AudioEngine initialization failed:', error);
       return false;
     }
   }
 
-  async preloadGameAudio(gameNumber) {
-    if (this.preloadComplete) return true;
-
+  async loadSound(url, id, gameNumber = null) {
     try {
-      // Initialize audio context first
-      await this.init();
+      if (!this.audioContext) {
+        await this.init();
+      }
 
-      // Load piano notes (1-8)
-      const notePromises = Array.from({ length: 8 }, (_, i) => 
-        this.loadSound(`/assets/audio/n${i + 1}.mp3`, `n${i + 1}`)
-      );
+      // Only check game transitions for melody sounds when gameNumber is provided
+      if (gameNumber && id.startsWith('melody') && this.currentGame !== gameNumber) {
+        this.clearMelodies();
+        this.currentGame = gameNumber;
+      }
 
-      // Load UI sounds
-      const uiSoundPromises = [
-        this.loadSound('/assets/audio/ui-sounds/wrong-note.mp3', 'wrong'),
-        this.loadSound('/assets/audio/ui-sounds/bar-failed.mp3', 'fail'),
-        this.loadSound('/assets/audio/ui-sounds/bar-complete.mp3', 'complete'),
-        this.loadSound('/assets/audio/ui-sounds/note-flip.mp3', 'flip')
-      ];
-
-      // Load game-specific melodies
-      const response = await fetch(`/assets/audio/testMelodies/game${gameNumber}/current.json`);
-      const data = await response.json();
-      
-      const melodyPromises = data.melodyParts.map((path, index) => 
-        this.loadSound(path, `melody${index}`)
-      );
-
-      // Load full tune
-      const fullTunePromise = this.loadSound(data.fullTune, 'fullTune');
-
-      // Wait for all audio to load
-      await Promise.all([
-        ...notePromises,
-        ...uiSoundPromises,
-        ...melodyPromises,
-        fullTunePromise
-      ]);
-
-      this.preloadComplete = true;
-      return true;
+      console.log(`Loading sound: ${id} from ${url}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      this.buffers.set(id, audioBuffer);
+      console.log(`Sound loaded successfully: ${id}`);
+      return audioBuffer;
     } catch (error) {
-      console.error('Failed to preload game audio:', error);
-      return false;
+      console.error(`Failed to load sound ${id}:`, error);
+      throw error;
     }
   }
 
-  async loadSound(url, id) {
-    // Check if already loading this sound
-    if (this.loadingPromises.has(id)) {
-      return this.loadingPromises.get(id);
-    }
-
-    // Check if already loaded
-    if (this.buffers.has(id)) {
-      return this.buffers.get(id);
-    }
-
-    const loadPromise = (async () => {
-      try {
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-        this.buffers.set(id, audioBuffer);
-        return audioBuffer;
-      } catch (error) {
-        console.error(`Failed to load sound ${id}:`, error);
-        throw error;
-      } finally {
-        this.loadingPromises.delete(id);
+  clearMelodies() {
+    // Clear only melody buffers, keep UI sounds and piano notes
+    for (const [key] of this.buffers) {
+      if (key.startsWith('melody')) {
+        this.buffers.delete(key);
       }
-    })();
-
-    this.loadingPromises.set(id, loadPromise);
-    return loadPromise;
+    }
+    console.log('Cleared melody buffers');
   }
 
   playSound(id, time = 0) {
     if (!this.initialized || !this.audioContext || !this.buffers.has(id)) {
+      console.error(`Cannot play sound ${id}: Engine not initialized or buffer not found`);
       return null;
     }
 
     try {
+      if (document.hidden) {
+        console.log('Page is hidden, not playing sound');
+        return null;
+      }
+
       const source = this.audioContext.createBufferSource();
       source.buffer = this.buffers.get(id);
       
-      const noteGain = this.audioContext.createGain();
-      noteGain.gain.value = 0.8; // Slightly reduced volume for better mixing
+      const gainNode = this.audioContext.createGain();
+      gainNode.gain.value = 1.0;
 
-      source.connect(noteGain);
-      noteGain.connect(this.masterGain);
+      source.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
 
       const startTime = this.audioContext.currentTime + time;
       source.start(startTime);
@@ -151,7 +169,7 @@ class AudioEngine {
       source.onended = () => {
         this.activeSources.delete(source);
         source.disconnect();
-        noteGain.disconnect();
+        gainNode.disconnect();
       };
       
       return source;
@@ -161,16 +179,13 @@ class AudioEngine {
     }
   }
 
-  stopAllSounds() {
-    this.activeSources.forEach(source => {
-      try {
-        source.stop(0);
-        source.disconnect();
-      } catch (e) {
-        console.error('Error stopping source:', e);
-      }
-    });
-    this.activeSources.clear();
+  playNote(noteNumber) {
+    console.log(`Playing note: ${noteNumber}`);
+    return this.playSound(`n${noteNumber}`);
+  }
+
+  isPlaying() {
+    return this.activeSources.size > 0;
   }
 }
 
