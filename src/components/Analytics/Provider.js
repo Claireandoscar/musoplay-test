@@ -1,14 +1,18 @@
-// eslint-disable-next-line no-unused-vars
-import React, { useEffect } from 'react';
-import { initClarity } from '../../services/analytics';
+import React from 'react';
 
-
-const AnalyticsProvider = ({ children }) => {
-  useEffect(() => {
-    initClarity();
+export const AnalyticsProvider = ({ children }) => {
+  // Initialize Microsoft Clarity
+  React.useEffect(() => {
+    try {
+      if (window.clarity) {
+        console.log('Clarity initialized');
+      }
+    } catch (error) {
+      console.error('Failed to initialize analytics:', error);
+    }
   }, []);
-  
-  return children;
+
+  return <>{children}</>;
 };
 
 export default AnalyticsProvider;

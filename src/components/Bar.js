@@ -127,60 +127,41 @@ const Bar = ({
   return (
     <div className={`bar bar${barNumber} ${isActive ? 'active' : ''}`}>
       <div className="line"></div>
-      {hasFailed ? (
-        [...Array(4)].map((_, index) => (
-          <div
-            key={index}
-            className="note visible"
-            style={{ 
-              left: `${crotchetPositions[index]}px`,
-              width: '60px'
-            }}
-          >
-            <img 
-              src="/assets/images/ui/heart-empty.svg"
-              alt="Empty Heart"
-              className="note-image"
-            />
-          </div>
-        ))
-      ) : (
-        sequence?.map((note, index) => (
-          <div
-            key={index}
-            onClick={() => handleNoteClick(index)}
-            className={`note 
-              ${getNoteVisibility(index)} 
-              ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
-              ${flippedNotes[index] ? 'flipped' : ''}
-              ${(isBarComplete || isGameComplete) ? 'clickable' : ''}`
-            }
-            style={{ 
-              left: `${getNotePosition(note, index, sequence)}px`,
-              width: note.isQuaverLeft || note.isQuaverRight ? '27.6px' : '60px'
-            }}
-          >
-            <div className="note-container">
-              <div className="note-front">
-                <img 
-                  src={getNoteImagePath(note, false)}
-                  alt={`Note ${note.fullNote || note.number}`}
-                  className="note-image"
-                />
-              </div>
-              <div className="note-back">
-                <img 
-                  src={getNoteImagePath(note, true)}
-                  alt={`Note name ${noteNameMap[note.number]}`}
-                  className="note-image"
-                />
-              </div>
+      {sequence?.map((note, index) => (
+        <div
+          key={index}
+          onClick={() => handleNoteClick(index)}
+          className={`note 
+            ${getNoteVisibility(index)} 
+            ${note.isQuaverLeft || note.isQuaverRight ? 'quaver' : 'crotchet'}
+            ${flippedNotes[index] ? 'flipped' : ''}
+            ${(isBarComplete || isGameComplete || hasFailed) ? 'clickable' : ''}`  // Added hasFailed here
+          }
+          style={{ 
+            left: `${getNotePosition(note, index, sequence)}px`,
+            width: note.isQuaverLeft || note.isQuaverRight ? '27.6px' : '60px'
+          }}
+        >
+          <div className="note-container">
+            <div className="note-front">
+              <img 
+                src={getNoteImagePath(note, false)}
+                alt={`Note ${note.fullNote || note.number}`}
+                className="note-image"
+              />
+            </div>
+            <div className="note-back">
+              <img 
+                src={getNoteImagePath(note, true)}
+                alt={`Note name ${noteNameMap[note.number]}`}
+                className="note-image"
+              />
             </div>
           </div>
-        ))
-      )}
+        </div>
+      ))}
     </div>
-  );
+);
 };
 
 export default Bar;

@@ -116,6 +116,7 @@ function App() {
   const [currentBarIndex, setCurrentBarIndex] = useState(0);
   const [currentGameNumber, setCurrentGameNumber] = useState(1);
   const [showInstructions, setShowInstructions] = useState(false);
+
   
   // Sequence and completion tracking
   const [correctSequence, setCorrectSequence] = useState([]);
@@ -503,9 +504,8 @@ const moveToNextBar = useCallback((isSuccess = true) => {
     barIndex: currentBarIndex,
     success: isSuccess,
     hearts: gameState.barHearts[currentBarIndex]
-  });  // Added closing brace
+  });
  
-  // Clear previous bar audio
   if (melodyAudio) {
     melodyAudio.pause();
     melodyAudio.currentTime = 0;
@@ -522,7 +522,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
       completed: true
     });
     dispatch({ type: 'SET_GAME_PHASE', payload: 'ended' });
-
+ 
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     setShowEndAnimation(true);
@@ -531,14 +531,14 @@ const moveToNextBar = useCallback((isSuccess = true) => {
       fullTuneMelodyAudio.play().catch(error => console.error("Audio playback failed:", error));
     }
   };
-
+ 
   const handleNextBar = async () => {
     dispatch({ 
       type: 'UPDATE_COMPLETED_BARS', 
       barIndex: currentBarIndex,
       completed: true
     });
-
+ 
     if (isSuccess) {
       try {
         if (audioEngine && typeof audioEngine.playSound === 'function') {
@@ -548,7 +548,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
         console.log('Could not play success sound:', error);
       }
     }
-
+ 
     dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
     dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
     setGameMode('initial');
@@ -557,14 +557,20 @@ const moveToNextBar = useCallback((isSuccess = true) => {
     await loadAudio(currentBarIndex + 1);
     setCurrentBarIndex(prev => prev + 1);
   };
-
+ 
   const nextBarIndex = currentBarIndex + 1;
   if (nextBarIndex < correctSequence.length) {
-    handleNextBar();
+    if (!isSuccess) {
+      setTimeout(() => {
+        handleNextBar();
+      }, 3000); 
+    } else {
+      handleNextBar();
+    }
   } else {
     handleGameEnd();
   }
-}, [
+ }, [
   currentBarIndex,    
   correctSequence.length,   
   fullTuneMelodyAudio,   
@@ -572,7 +578,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
   dispatch,   
   loadAudio,
   gameState.barHearts
-]);
+ ]);
 
 const handleNextGame = () => {
     trackEvent('game_completed', { 
@@ -632,7 +638,7 @@ const handleNextGame = () => {
   resetGameStates();
 };
 
-const handleNotePlay = useCallback(async (noteNumber) => {   
+const handleNotePlay = useCallback(async (noteNumber) => {
   trackEvent('note_played', { 
     note: noteNumber,
     gamePhase: gameState.gamePhase,
@@ -646,11 +652,9 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     return;   
   }
 
-  // Try to recover audio context if needed
   if (audioEngine?.audioContext?.state !== 'running') {
     try {
       await audioEngine.init();
-      // Add a small delay after resuming context (helps on Android)
       await new Promise(resolve => setTimeout(resolve, 50));
     } catch (error) {
       console.error('Failed to initialize audio engine:', error);
@@ -658,7 +662,6 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     }
   }
 
-  // Play note with error handling
   try {
     console.log('Playing note:', noteNumber);
     const source = audioEngine.playSound(`n${noteNumber}`);
@@ -667,7 +670,6 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     }
   } catch (error) {
     console.error('Failed to play note:', error);
-    // Try to recover
     try {
       await audioEngine.init();
       audioEngine.playSound(`n${noteNumber}`);
@@ -676,17 +678,14 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     }
   }
 
-  // Game logic for perform mode
   if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
     const currentSequence = correctSequence[currentBarIndex];
     const currentNote = currentSequence[gameState.currentNoteIndex];
     
     if (currentNote && noteNumber === currentNote.number) {
-      // Handle correct note
       const newNoteIndex = gameState.currentNoteIndex + 1;
       dispatch({ type: 'UPDATE_NOTE_INDEX', payload: newNoteIndex });
 
-      // Check if bar is complete
       if (newNoteIndex === currentSequence.length) {
         try {
           audioEngine.playSound('complete');
@@ -699,85 +698,49 @@ const handleNotePlay = useCallback(async (noteNumber) => {
         moveToNextBar(true);
       }
     } else {
-      // Handle wrong note
       const handleBarFailure = async () => {
-        // Play wrong note sound with retry logic
         try {
-          await audioEngine.playSound('wrong');
-        } catch (error) {
-          console.error('Failed to play wrong note sound:', error);
-          try {
-            await audioEngine.init();
             await audioEngine.playSound('wrong');
-          } catch (retryError) {
-            console.error('Retry to play wrong sound failed:', retryError);
-          }
+        } catch (error) {
+            console.error('Failed to play wrong note sound:', error);
         }
-
-        // Update game state for wrong note
+     
         dispatch({ type: 'SET_BAR_FAILING', failing: true });
         dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
         dispatch({ type: 'WRONG_NOTE', barIndex: currentBarIndex });
-
-        // Check if this was the last heart
+     
         if (gameState.barHearts[currentBarIndex] <= 1) {
-          // Add breaking animation to hearts
-          const heartElements = document.querySelectorAll('.life-indicator .heart');
-          heartElements.forEach(heart => {
-            heart.classList.add('breaking');
-          });
-
-          // Play fail sound after heart break animation starts
-          await new Promise(resolve => setTimeout(resolve, 300));
-          try {
-            await audioEngine.playSound('fail');
-          } catch (error) {
-            console.error('Failed to play fail sound:', error);
+            dispatch({ 
+                type: 'SET_BAR_FAILED', 
+                barIndex: currentBarIndex, 
+                failed: true 
+            });
+     
+            await new Promise(resolve => setTimeout(resolve, 300));
             try {
-              await audioEngine.init();
-              await audioEngine.playSound('fail');
-            } catch (retryError) {
-              console.error('Retry to play fail sound failed:', retryError);
+                await audioEngine.playSound('wrong');
+            } catch (error) {
+                console.error('Failed to play wrong note sound:', error);
             }
-          }
-
-          // Wait for animations to complete
-          await new Promise(resolve => setTimeout(resolve, 1200));
-
-          // Reset state and move to next bar
-          dispatch({ type: 'SET_BAR_FAILING', failing: false });
-          dispatch({ 
-            type: 'SET_BAR_FAILED', 
-            barIndex: currentBarIndex, 
-            failed: true 
-          });
-          moveToNextBar(false);
-
-          // Cleanup animations
-          heartElements.forEach(heart => {
-            heart.classList.remove('breaking');
-          });
-        } else {
-          // For non-fatal wrong notes, just reset failing state after delay
-          setTimeout(() => {
+     
+            await new Promise(resolve => setTimeout(resolve, 300));
             dispatch({ type: 'SET_BAR_FAILING', failing: false });
-          }, 500);
+            moveToNextBar(false);
+        } else {
+            setTimeout(() => {
+                dispatch({ type: 'SET_BAR_FAILING', failing: false });
+            }, 500);
         }
-      };
-
-      handleBarFailure().catch(error => {
+      }
+     
+      try {
+        await handleBarFailure();
+      } catch (error) {
         console.error('Error in handleBarFailure:', error);
-      });
+      }
     }
   }
-}, [
-  gameState,
-  correctSequence,
-  currentBarIndex,
-  dispatch,
-  moveToNextBar,
-  setScore
-]);
+}, [gameState, correctSequence, currentBarIndex, dispatch, moveToNextBar, setScore]);
 return (
   <div className="game-wrapper">
     {showStartScreen ? (
