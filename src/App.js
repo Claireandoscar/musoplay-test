@@ -813,6 +813,7 @@ return (
   isPerformAvailable={isAudioLoaded}
   isAudioLoaded={isAudioLoaded}
   gamePhase={gameState.gamePhase}
+  isGameEnded={isGameEnded}
 />
         <VirtualInstrument 
           notes={notes}

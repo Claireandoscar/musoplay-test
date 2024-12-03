@@ -6,7 +6,8 @@ const Controls = ({
   isListenPracticeMode,
   isPerformAvailable,
   isAudioLoaded,
-  gamePhase
+  gamePhase,
+  isGameEnded  // Add this new prop
 }) => {
   console.log({
     isListenPracticeMode,
@@ -20,7 +21,7 @@ const Controls = ({
       <button
         className={`control-button listen-practice ${isListenPracticeMode ? 'active' : ''}`}
         onClick={onListenPractice}
-        disabled={!isAudioLoaded || gamePhase === 'perform'}
+        disabled={!isAudioLoaded || gamePhase === 'perform' || isGameEnded}
         style={{ 
           backgroundImage: `url(${process.env.PUBLIC_URL}/assets/images/ui/listen-practice.svg)`
         }}
