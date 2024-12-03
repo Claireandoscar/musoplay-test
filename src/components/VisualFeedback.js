@@ -13,8 +13,8 @@ const VisualFeedback = ({ barNumber, show, onComplete }) => {
     
     const messages = {
         1: "REMEMBER TO PRACTICE BEFORE YOU PERFORM!",
-        2: "DON'T WORRY. TAKE YOUR TIME. LISTEN CLOSELY!",
-        3: "PERHAPS SPEND MORE TIME IN PRACTICE MODE!"
+        2: "KEEP GOING. PRACTICE MAKES PERFECT!",
+        3: "TRY THE NEXT BAR, MUSICIANS ALWAYS PRACTICE!"
     };
     // When shown, set timer to hide
     useEffect(() => {
