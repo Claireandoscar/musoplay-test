@@ -8,7 +8,6 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
   
   const handleNextClick = () => {
     if (currentGameNumber === 3) {
-      // Redirect to survey after the third game
       window.location.href = "https://www.surveymonkey.com/r/musoplaysurvey1";
     } else {
       onNext();
@@ -45,7 +44,46 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
     }
   }, [currentGameNumber]);
 
-  // ... rest of your existing component code stays the same ...
+  const getScoringPhrase = (score) => {
+    if (score === 16) return "Legendary";
+    if (score === 15) return "Outstanding";
+    if (score === 14) return "Brilliant";
+    if (score === 13) return "Impressive";
+    if (score === 12) return "Fantastic";
+    if (score === 11) return "Well Done";
+    if (score === 10) return "Great Job";
+    if (score === 9) return "Nice Work";
+    if (score === 8) return "Good Try";
+  };
+
+  useEffect(() => {
+    const message = getGameMessage().text;
+    if (showText && typedText.length < message.length) {
+      const timer = setTimeout(() => {
+        setTypedText(message.slice(0, typedText.length + 1));
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showText, typedText, getGameMessage]);
+
+  useEffect(() => {
+    const heartAnimationDuration = 300;
+    const totalHeartAnimationTime = heartAnimationDuration * 4;
+
+    const timer = setTimeout(() => {
+      if (animationStage < 4) {
+        setAnimationStage(prev => prev + 1);
+      } else if (animationStage === 4) {
+        setShowText(true);
+      }
+    }, animationStage < 4 ? heartAnimationDuration : totalHeartAnimationTime);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [animationStage]);
+
+  const currentGameStyle = getGameMessage();
 
   return (
     <div className="end-game-animation">
