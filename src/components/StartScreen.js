@@ -8,9 +8,9 @@ const StartScreen = ({ onStartGame }) => {
   const [showStartButton, setShowStartButton] = useState(false);
   
   const infoBlocks = [
-    "WELCOME TO MUSOPLAY TESTING!",
-    "PLEASE SHARE YOUR THOUGHTS IN A QUICK SURVEY AFTER"
-  ];
+    `WELCOME TO MUSOPLAY TESTING!
+PLEASE SHARE YOUR THOUGHTS IN A QUICK SURVEY AFTER`
+];
 
   const handleNext = () => {
     setIsFlipping(true);
