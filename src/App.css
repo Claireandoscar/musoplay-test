@@ -152,11 +152,9 @@ body {
   transform: scale(0.95);
 }
 
+/* Instructions popup styles */
 .instructions-popup {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   width: 350px;
   height: auto;
   background-color: #FFFDEE;
@@ -167,12 +165,40 @@ body {
   box-sizing: border-box;
   border: 7px solid #AB08FF;
   font-family: 'patrick-hand-sc', sans-serif;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+
+.instructions-content {
+  color: black;
+  text-align: center;
+}
+
+.instructions-content h2 {
+  font-size: 28px;
+  margin-bottom: 30px;
+  font-family: 'patrick-hand-sc', sans-serif;
+}
+
+.instruction-flow {
+  padding: 0 10px;
+  margin-bottom: 30px;
+}
+
+.instruction-flow p {
+  font-size: 22px;
+  line-height: 1.6;
+  text-align: left;
+  margin: 0;
+  font-family: 'patrick-hand-sc', sans-serif;
 }
 
 .instructions-next {
-  position: static;  /* Override the absolute positioning */
-  margin: 20px auto 0;  /* Center the button and add space above */
-  width: 170px;  /* Make the button slightly smaller than the regular next button */
+  position: static;
+  margin: 20px auto 0;
+  width: 170px;
   height: 90px;
 }
 

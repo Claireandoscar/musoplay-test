@@ -472,21 +472,22 @@ useEffect(() => {
 // Handle game start
 const handleStartGame = () => {   
   trackEvent('game_started', { gameNumber: currentGameNumber });     
-  setShowStartScreen(false);     
+  setShowStartScreen(false);
+  setShowInstructions(true); // Show instructions immediately when game starts
   setGameMode('initial');
     
-    dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
-    dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
-    dispatch({ type: 'RESET_BAR_HEARTS' });
-    dispatch({ type: 'RESET_COMPLETED_BARS' });
-    dispatch({ type: 'SET_BAR_FAILING', failing: false });
+  dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
+  dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
+  dispatch({ type: 'RESET_BAR_HEARTS' });
+  dispatch({ type: 'RESET_COMPLETED_BARS' });
+  dispatch({ type: 'SET_BAR_FAILING', failing: false });
     
-    setScore(0);
-    setCurrentBarIndex(0);
-    setIsGameComplete(false);
-    setIsGameEnded(false);
-    setShowEndAnimation(false);
-    setIsListenPracticeMode(false);
+  setScore(0);
+  setCurrentBarIndex(0);
+  setIsGameComplete(false);
+  setIsGameEnded(false);
+  setShowEndAnimation(false);
+  setIsListenPracticeMode(false);
 };
 
 // Cleanup effect for audio
@@ -741,6 +742,7 @@ const handleNotePlay = useCallback(async (noteNumber) => {
     }
   }
 }, [gameState, correctSequence, currentBarIndex, dispatch, moveToNextBar, setScore]);
+
 return (
   <div className="game-wrapper">
     {showStartScreen ? (
@@ -752,10 +754,7 @@ return (
       </div>
     ) : (
       <div className={`game-container ${gameMode}`}>
-        <Toolbar onShowInstructions={() => {
-          console.log('Setting showInstructions to true');
-          setShowInstructions(true);
-        }} />
+        <Toolbar onShowInstructions={() => setShowInstructions(true)} />
         <GameBoard 
           barHearts={gameState.barHearts}
           currentBarIndex={currentBarIndex}
@@ -770,14 +769,14 @@ return (
           gamePhase={gameState.gamePhase}
         />
         <Controls 
-  onListenPractice={handleListenPractice}
-  onPerform={handlePerform}
-  isListenPracticeMode={isListenPracticeMode}
-  isPerformAvailable={isAudioLoaded}
-  isAudioLoaded={isAudioLoaded}
-  gamePhase={gameState.gamePhase}
-  isGameEnded={isGameEnded}
-/>
+          onListenPractice={handleListenPractice}
+          onPerform={handlePerform}
+          isListenPracticeMode={isListenPracticeMode}
+          isPerformAvailable={isAudioLoaded}
+          isAudioLoaded={isAudioLoaded}
+          gamePhase={gameState.gamePhase}
+          isGameEnded={isGameEnded}
+        />
         <VirtualInstrument 
           notes={notes}
           onNotePlay={handleNotePlay}
@@ -798,22 +797,22 @@ return (
             <div className="instructions-content">
               <h2>HOW TO PLAY</h2>
               <div className="instruction-flow">
-              <p>
-                <span style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                  <img src="/assets/images/ui/heart.svg" alt="heart" style={{ width: '20px', height: '20px', margin: '0 5px' }} />
-                  TURN ON YOUR DEVICE SOUND
-                  <img src="/assets/images/ui/heart.svg" alt="heart" style={{ width: '20px', height: '20px', margin: '0 5px' }} />
-                </span>
-                1. PRESS LISTEN & PRACTICE<br/>
-                2. PLAY WHAT YOU HEAR USING THE COLOURFUL BUTTONS<br/>
-                3. PRACTICE AS MANY TIMES AS YOU NEED<br/>
-                4. PRESS PERFORM TO PLAY THE MELODY FOR REAL<br/>
-                5. HIT THE RIGHT NOTES TO HANG ON TO YOUR HEARTS!
-              </p>
+                <p>
+                  <span style={{ fontSize: '0.8em', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                    <img src="/assets/images/ui/heart.svg" alt="heart" style={{ width: '20px', height: '20px', margin: '0 5px' }} />
+                    TURN OFF SILENT MODE
+                    <img src="/assets/images/ui/heart.svg" alt="heart" style={{ width: '20px', height: '20px', margin: '0 5px' }} />
+                  </span>
+                  1. PRESS LISTEN & PRACTICE<br/>
+                  2. PLAY WHAT YOU HEAR USING THE COLOURFUL BUTTONS<br/>
+                  3. PRACTICE AS MANY TIMES AS YOU NEED<br/>
+                  4. PRESS PERFORM TO PLAY THE MELODY FOR REAL<br/>
+                  5. HIT THE RIGHT NOTES TO HANG ON TO YOUR HEARTS!
+                </p>
               </div>
               <p className="challenge">CAN YOU HIT THE RIGHT NOTES?</p>
               <button className="next-button instructions-next" onClick={() => setShowInstructions(false)}>
-                <img src="/assets/images/ui/next.svg" alt="Next" />
+                <img src="/assets/images/ui/play.svg" alt="Next" />
               </button>
             </div>
           </div>

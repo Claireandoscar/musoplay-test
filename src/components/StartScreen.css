@@ -25,104 +25,22 @@
   font-size: 18px;
 }
 
-/* Central button container */
-/* Update the central button container styles */
-.central-button-container {
+.testing-info {
   position: absolute;
-  width: 200px;
-  height: 200px;
-  left: 95px;
-  top: 210px; /* This will position both buttons */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Central button container - for rectangle start button */
-.central-button-container {
-  position: absolute;
-  width: 200px;
-  height: 250px;  /* Make taller for rectangle shape */
-  left: 95px;
-  top: 210px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Start button as a rectangle */
-.start-button {
-  width: 200px;
-  height: 250px;  /* Taller for rectangle shape */
-  background: none;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.start-button img {
-  width: 100%;
-  height: auto;  /* Let image maintain aspect ratio */
-  object-fit: contain;
-}
-
-.start-button span {
-  position: absolute;
-  bottom: -20px;  /* Adjusted to work with rectangle shape */
-  left: 0;
-  width: 100%;
+  top: 205px;
+  left: 45px;
+  width: 300px;
   text-align: center;
-  font-size: 22px;
-  line-height: 1.2;
   font-family: 'patrick-hand-sc', sans-serif;
-}
-.start-button.active {
-  animation: popIn 0.5s ease-out, pulse 2s infinite;
-}
-
-.start-button:hover {
-  animation: none;
-  transform: scale(1.05);
+  font-size: 28px;
+  line-height: 1.4;
 }
 
-.start-button:active {
-  transform: scale(0.95);
+.testing-info p {
+  margin-bottom: 30px;
 }
 
-.start-button img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.start-button span {
-  position: absolute;
-  bottom: -50px;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  font-size: 22px;
-  line-height: 1.2;
-  font-family: 'patrick-hand-sc', sans-serif;
-}
-/* Central button container - only one definition */
-.central-button-container {
-  position: absolute;
-  width: 200px;
-  height: 250px;  /* Rectangle shape for start button */
-  left: 95px;
-  top: 210px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Next button - single definition with exact positioning */
+/* Next button with animations preserved */
 .next-button {
   position: absolute;
   width: 210px;
@@ -155,128 +73,11 @@
   transform: scale(0.95);
 }
 
-.testing-info {
-  position: absolute;
-  top: 205px;
-  left: 45px;
-  width: 300px;
-  text-align: center;
-  font-family: 'patrick-hand-sc', sans-serif;
-  font-size: 28px;
-  line-height: 1.4;
-  perspective: 1000px;
-}
-
-.testing-info p {
-  margin-bottom: 30px;
-  transition: transform 0.5s ease-in-out;
-  animation: slideInFromLeft 0.5s ease-out;
-}
-
-.testing-info.flipping p {
-  animation: slideOutToRight 0.5s ease-in;
-}
-
 .instructions-next {
-  position: static;  /* Override the absolute positioning */
-  margin: 20px auto 0;  /* Center the button and add space above */
-  width: 170px;  /* Make the button slightly smaller than the regular next button */
-  height: 90px;
-}
-
-/* Instructions popup styles */
-.instructions-popup {
-  position: absolute;
-  width: 350px;
-  height: auto;
-  background-color: #FFFDEE;
-  border-radius: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  padding: 30px 20px;
-  box-sizing: border-box;
-  border: 7px solid #AB08FF;
-  font-family: 'patrick-hand-sc', sans-serif;
-}
-
-.close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 24px;
-  color: #000;
-  font-family: 'patrick-hand-sc', sans-serif;
-}
-
-.instructions-content {
-  color: black;
-  text-align: center;
-}
-
-.instructions-content h2 {
-  font-size: 28px;
-  margin-bottom: 30px;
-  font-family: 'patrick-hand-sc', sans-serif;
-}
-
-.instruction-flow {
-  padding: 0 10px;
-  margin-bottom: 30px;
-}
-
-.instruction-flow p {
-  font-size: 22px;
-  line-height: 1.6;
-  text-align: left;
-  margin: 0;
-  font-family: 'patrick-hand-sc', sans-serif;
-}
-
-.inline-button {
-  vertical-align: middle;
-  display: inline-block;
-  margin: 0 4px;
-}
-
-.inline-button.large {
-  height: 40px;
+  position: static;
+  margin: 20px auto 0;
   width: 170px;
-}
-
-.inline-button.small {
-  height: 40px;
-  width: 90px;
-}
-
-.inline-icon {
-  height: 25px;
-  width: 25px;
-  vertical-align: middle;
-  display: inline-block;
-  margin: 0 4px;
-}
-
-.challenge {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 20px;
-  font-family: 'patrick-hand-sc', sans-serif;
-}
-
-.enjoy-text {
-  position: absolute;
-  top: 500px;  /* Same position where next button was */
-  width: 100%;
-  text-align: center;
-  font-size: 28px;
-  font-family: 'patrick-hand-sc', sans-serif;
-  color: black;
-  animation: popIn 0.5s ease-out;
+  height: 90px;
 }
 
 /* Animations */
@@ -284,40 +85,4 @@
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
-}
-
-@keyframes popIn {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  70% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInFromLeft {
-  0% {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideOutToRight {
-  0% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
 }
