@@ -102,3 +102,33 @@
 .cube-button.pressed:not(:disabled):not(.game-ended) {
   transform: scale(0.95) !important;
 }
+
+.cube-button:not(:disabled):not(.game-ended):active,
+.cube-button.pressed:not(:disabled):not(.game-ended) {
+  transform: scale(0.95) !important;
+}
+
+/* Add new hint animation styles below */
+@keyframes hintPulse {
+  0% {
+    transform: translateZ(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    transform: translateZ(0) scale(1.1);
+    box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    transform: translateZ(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+.cube-button.show-hint:not(:disabled):not(.game-ended):not(.pressed) {
+  animation: hintPulse 1.5s ease-in-out infinite;
+}
+
+/* Ensure hint animation doesn't conflict with other states */
+.cube-button.show-hint:not(:disabled):not(.game-ended).pressed {
+  animation: none;
+}

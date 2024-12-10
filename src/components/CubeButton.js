@@ -8,7 +8,8 @@ const CubeButton = ({
   noteNumber, 
   onNotePlay, 
   isGameEnded,
-  isBarFailing 
+  isBarFailing, 
+  showHint 
 }) => {
   const buttonRef = useRef({
     isPressed: false,
@@ -82,7 +83,7 @@ const CubeButton = ({
 
   const buttonClass = `cube-button ${color} ${isGameEnded ? 'game-ended' : ''} ${
     buttonRef.current.isPressed ? 'pressed' : ''
-  }`;
+  } ${showHint ? 'show-hint' : ''}`;  // Add hint class
 
   return (
     <button 

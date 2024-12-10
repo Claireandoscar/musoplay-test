@@ -195,43 +195,46 @@ stopAllSounds() {
       return true;
     }
 
-  playSound(id, time = 0) {
-    if (!this.initialized || !this.audioContext || !this.buffers.has(id)) {
-      console.error(`Cannot play sound ${id}: Engine not initialized or buffer not found`);
-      return null;
-    }
-
-    try {
-      if (document.hidden) {
-        console.log('Page is hidden, not playing sound');
-        return null;
+    playSound(id, time = 0, onComplete = null) {
+      if (!this.initialized || !this.audioContext || !this.buffers.has(id)) {
+          console.error(`Cannot play sound ${id}: Engine not initialized or buffer not found`);
+          return null;
       }
-
-      const source = this.audioContext.createBufferSource();
-      source.buffer = this.buffers.get(id);
-      
-      const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = 1.0;
-
-      source.connect(gainNode);
-      gainNode.connect(this.audioContext.destination);
-
-      const startTime = this.audioContext.currentTime + time;
-      source.start(startTime);
-      
-      this.activeSources.add(source);
-      
-      source.onended = () => {
-        this.activeSources.delete(source);
-        source.disconnect();
-        gainNode.disconnect();
-      };
-      
-      return source;
-    } catch (error) {
-      console.error(`Error playing sound ${id}:`, error);
-      return null;
-    }
+  
+      try {
+          if (document.hidden) {
+              console.log('Page is hidden, not playing sound');
+              return null;
+          }
+  
+          const source = this.audioContext.createBufferSource();
+          source.buffer = this.buffers.get(id);
+          
+          const gainNode = this.audioContext.createGain();
+          gainNode.gain.value = 1.0;
+  
+          source.connect(gainNode);
+          gainNode.connect(this.audioContext.destination);
+  
+          const startTime = this.audioContext.currentTime + time;
+          source.start(startTime);
+          
+          this.activeSources.add(source);
+          
+          source.onended = () => {
+              this.activeSources.delete(source);
+              source.disconnect();
+              gainNode.disconnect();
+              if (onComplete && typeof onComplete === 'function') {
+                  onComplete();
+              }
+          };
+          
+          return source;
+      } catch (error) {
+          console.error(`Error playing sound ${id}:`, error);
+          return null;
+      }
   }
 
   playNote(noteNumber) {

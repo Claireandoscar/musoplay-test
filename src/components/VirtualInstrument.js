@@ -1,7 +1,18 @@
 import React from 'react';
 import CubeButton from './CubeButton';
 
-const VirtualInstrument = ({ notes, onNotePlay, isGameEnded, isBarFailing }) => {
+const VirtualInstrument = ({ 
+  notes, 
+  onNotePlay, 
+  isGameEnded, 
+  isBarFailing, 
+  showFirstNoteHint,
+  correctSequence,
+  currentBarIndex
+}) => {
+  // Get the first note number from the current sequence if available
+  const firstNoteNumber = correctSequence[currentBarIndex]?.[0]?.number;
+
   return (
     <div className="virtual-instrument">
       {notes.map((note) => (
@@ -14,6 +25,7 @@ const VirtualInstrument = ({ notes, onNotePlay, isGameEnded, isBarFailing }) => 
           onNotePlay={onNotePlay}
           isGameEnded={isGameEnded}
           isBarFailing={isBarFailing}
+          showHint={showFirstNoteHint && note.noteNumber === firstNoteNumber}
         />
       ))}
     </div>

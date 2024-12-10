@@ -124,6 +124,7 @@ function App() {
   const [isGameEnded, setIsGameEnded] = useState(false);
   const [showEndAnimation, setShowEndAnimation] = useState(false);
   const [isListenPracticeMode, setIsListenPracticeMode] = useState(false);
+  const [showFirstNoteHint, setShowFirstNoteHint] = useState(false);
 
   const notes = [
     { id: 1, color: 'red', noteNumber: 1 },
@@ -337,37 +338,44 @@ useEffect(() => {
   const handleListenPractice = useCallback(async () => {
     trackEvent('practice_mode_entered', { barIndex: currentBarIndex });
     if (!isAudioLoaded) return;
-  
+    
     try {
-      // Force reinitialize audio engine and verify state
-      await audioEngine.init();
-      
-      // Verify buffers are loaded before proceeding
-      const bufferCheck = await audioEngine.verifyBuffers();
-      if (!bufferCheck) {
-        // If buffers aren't found, reload them
-        for (let i = 1; i <= 8; i++) {
-          await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
+        // Reset hint state before playing
+        setShowFirstNoteHint(false);
+        
+        // Force reinitialize audio engine and verify state
+        await audioEngine.init();
+        
+        // Verify buffers are loaded before proceeding
+        const bufferCheck = await audioEngine.verifyBuffers();
+        if (!bufferCheck) {
+            // If buffers aren't found, reload them
+            for (let i = 1; i <= 8; i++) {
+                await audioEngine.loadSound(`/assets/audio/n${i}.mp3`, `n${i}`);
+            }
         }
-      }
-      
-      // Now attempt to play melody
-      const playSuccess = await audioEngine.playSound(`melody${currentBarIndex}`);
-      
-      if (playSuccess) {
-        dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
-        setGameMode('practice');
-        setIsListenPracticeMode(true);
-        document.documentElement.dataset.hasInteracted = 'true';
-      } else {
-        throw new Error('Failed to play melody');
-      }
-      
+        
+        // Now attempt to play melody with completion callback
+        const playSuccess = await audioEngine.playSound(
+            `melody${currentBarIndex}`,
+            0,
+            () => setShowFirstNoteHint(true)
+        );
+        
+        if (playSuccess) {
+            dispatch({ type: 'SET_GAME_PHASE', payload: 'practice' });
+            setGameMode('practice');
+            setIsListenPracticeMode(true);
+            document.documentElement.dataset.hasInteracted = 'true';
+        } else {
+            throw new Error('Failed to play melody');
+        }
+        
     } catch (error) {
-      console.error('Failed to play melody:', error);
-      // Error recovery...
+        console.error('Failed to play melody:', error);
+        // Error recovery...
     }
-  }, [currentBarIndex, dispatch, isAudioLoaded]);
+}, [currentBarIndex, dispatch, isAudioLoaded]);
 
 // Updated perform mode handler
 const handlePerform = useCallback(async () => {
@@ -506,7 +514,10 @@ const moveToNextBar = useCallback((isSuccess = true) => {
     success: isSuccess,
     hearts: gameState.barHearts[currentBarIndex]
   });
- 
+  
+  // Reset hint state when moving to next bar
+  setShowFirstNoteHint(false);
+
   if (melodyAudio) {
     melodyAudio.pause();
     melodyAudio.currentTime = 0;
@@ -517,13 +528,13 @@ const moveToNextBar = useCallback((isSuccess = true) => {
     setIsGameEnded(true);
     setGameMode('ended');
     setIsListenPracticeMode(false);
-    dispatch({ 
-      type: 'UPDATE_COMPLETED_BARS', 
+    dispatch({
+      type: 'UPDATE_COMPLETED_BARS',
       barIndex: currentBarIndex,
       completed: true
     });
     dispatch({ type: 'SET_GAME_PHASE', payload: 'ended' });
- 
+
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     setShowEndAnimation(true);
@@ -532,14 +543,14 @@ const moveToNextBar = useCallback((isSuccess = true) => {
       fullTuneMelodyAudio.play().catch(error => console.error("Audio playback failed:", error));
     }
   };
- 
+  
   const handleNextBar = async () => {
-    dispatch({ 
-      type: 'UPDATE_COMPLETED_BARS', 
+    dispatch({
+      type: 'UPDATE_COMPLETED_BARS',
       barIndex: currentBarIndex,
       completed: true
     });
- 
+
     if (isSuccess) {
       try {
         if (audioEngine && typeof audioEngine.playSound === 'function') {
@@ -549,7 +560,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
         console.log('Could not play success sound:', error);
       }
     }
- 
+
     dispatch({ type: 'UPDATE_NOTE_INDEX', payload: 0 });
     dispatch({ type: 'SET_GAME_PHASE', payload: 'initial' });
     setGameMode('initial');
@@ -558,7 +569,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
     await loadAudio(currentBarIndex + 1);
     setCurrentBarIndex(prev => prev + 1);
   };
- 
+  
   const nextBarIndex = currentBarIndex + 1;
   if (nextBarIndex < correctSequence.length) {
     if (!isSuccess) {
@@ -571,7 +582,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
   } else {
     handleGameEnd();
   }
- }, [
+}, [
   currentBarIndex,    
   correctSequence.length,   
   fullTuneMelodyAudio,   
@@ -579,7 +590,7 @@ const moveToNextBar = useCallback((isSuccess = true) => {
   dispatch,   
   loadAudio,
   gameState.barHearts
- ]);
+]);
 
 const handleNextGame = () => {
     trackEvent('game_completed', { 
@@ -648,6 +659,15 @@ const handleNotePlay = useCallback(async (noteNumber) => {
 
   console.log('handleNotePlay called with note:', noteNumber);  
 
+  // Get first note of current sequence for hint check
+  const currentSequence = correctSequence[currentBarIndex];
+  const firstNote = currentSequence?.[0]?.number;
+
+  // Only remove hint if this is the correct first note
+  if (noteNumber === firstNote) {
+    setShowFirstNoteHint(false);
+  }
+
   if (gameState.gamePhase !== 'practice' && gameState.gamePhase !== 'perform') {     
     console.log('Note ignored - wrong game phase:', gameState.gamePhase);     
     return;   
@@ -680,7 +700,6 @@ const handleNotePlay = useCallback(async (noteNumber) => {
   }
 
   if (gameState.gamePhase === 'perform' && !gameState.isBarFailing) {
-    const currentSequence = correctSequence[currentBarIndex];
     const currentNote = currentSequence[gameState.currentNoteIndex];
     
     if (currentNote && noteNumber === currentNote.number) {
@@ -741,8 +760,7 @@ const handleNotePlay = useCallback(async (noteNumber) => {
       }
     }
   }
-}, [gameState, correctSequence, currentBarIndex, dispatch, moveToNextBar, setScore]);
-
+}, [gameState, correctSequence, currentBarIndex, dispatch, moveToNextBar, setScore, setShowFirstNoteHint]);
 return (
   <div className="game-wrapper">
     {showStartScreen ? (
@@ -778,11 +796,14 @@ return (
           isGameEnded={isGameEnded}
         />
         <VirtualInstrument 
-          notes={notes}
-          onNotePlay={handleNotePlay}
-          isGameEnded={isGameEnded}
-          isBarFailing={gameState.isBarFailing}
-        />
+  notes={notes}
+  onNotePlay={handleNotePlay}
+  isGameEnded={isGameEnded}
+  isBarFailing={gameState.isBarFailing}
+  showFirstNoteHint={showFirstNoteHint}
+  correctSequence={correctSequence}
+  currentBarIndex={currentBarIndex}
+/>
         <ProgressBar completedBars={gameState.completedBars.filter(Boolean).length} />
         {showEndAnimation && (
           <EndGameAnimation 
