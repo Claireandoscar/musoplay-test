@@ -8,7 +8,7 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
   
   const handleNextClick = () => {
     if (currentGameNumber === 3) {
-      window.location.href = "https://www.surveymonkey.com/r/musoplaysurvey1";
+      console.log('All games completed');
     } else {
       onNext();
     }
@@ -31,7 +31,7 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
         };
       case 3:
         return {
-          text: "THANK YOU FOR YOUR TIME!\nPRESS NEXT TO ACCESS THE SURVEY",
+          text: "WOW, THAT WAS A TOUGH LEVEL!\nSEE YOU IN APRIL!",
           color: "#00C22D",
           nextButton: "/assets/images/ui/next.svg"
         };
@@ -120,13 +120,15 @@ const EndGameAnimation = ({ score, barHearts, onNext, currentGameNumber }) => {
                 <p key={index}>{line}</p>
               ))}
             </div>
-            <img 
-              src={currentGameStyle.nextButton}
-              alt="Next" 
-              className="end-animation-next-button"
-              onClick={handleNextClick}
-              style={{ cursor: 'pointer' }}
-            />
+            {currentGameNumber < 3 && (
+              <img 
+                src={currentGameStyle.nextButton}
+                alt="Next" 
+                className="end-animation-next-button"
+                onClick={handleNextClick}
+                style={{ cursor: 'pointer' }}
+              />
+            )}
             <img 
               src={process.env.PUBLIC_URL + '/assets/images/ui/logo.svg'} 
               alt="Musoplay" 

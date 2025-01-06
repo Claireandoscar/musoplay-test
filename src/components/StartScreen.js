@@ -13,8 +13,8 @@ const StartScreen = ({ onStartGame }) => {
       
       <div className="testing-info">
         <p>
-          WELCOME TO MUSOPLAY TESTING!
-          PLEASE SHARE YOUR THOUGHTS IN A QUICK SURVEY AFTER
+          WELCOME TO THE MUSOPLAY DEMO! 
+          SEE YOU AT THE OFFICIAL LAUNCH - 6 APRIL 2025
         </p>
       </div>
 

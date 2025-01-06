@@ -597,10 +597,10 @@ const handleNextGame = () => {
       gameNumber: currentGameNumber,
       finalScore: score 
     });
-  if (currentGameNumber >= 3) {
-    console.log('All games completed - should redirect to survey');
-    return;
-  }
+    if (currentGameNumber >= 3) {
+      console.log('All games completed');
+      return;
+    }
 
   // Clear existing audio
   if (melodyAudio) {
